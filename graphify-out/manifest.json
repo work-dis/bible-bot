@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "scripts/configure_qstash.py": {
-    "mtime": 1784232977.007512,
-    "ast_hash": "f73d15ff46faea315736bd4860b90a1f",
+    "mtime": 1784236250.9383159,
+    "ast_hash": "cd370ce4c42daddb327b3d671cea3b11",
     "semantic_hash": ""
   },
   "scripts/configure_telegram.py": {
@@ -142,6 +142,11 @@
   "bible_bot/vercel_app.py": {
     "mtime": 1784233404.3851864,
     "ast_hash": "678b5f6a5cfbb814c8cce76c0e6644fd",
+    "semantic_hash": ""
+  },
+  "tests/test_configure_qstash.py": {
+    "mtime": 1784236264.0544882,
+    "ast_hash": "f558e9993d8979d63dee56cda64e63d7",
     "semantic_hash": ""
   }
 }

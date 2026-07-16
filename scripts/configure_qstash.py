@@ -4,8 +4,13 @@ import argparse
 import json
 import os
 import urllib.error
-import urllib.parse
 import urllib.request
+
+
+def schedule_api_url(destination: str) -> str:
+    # QStash treats the destination as a URL-shaped path suffix and expects
+    # the http(s) scheme to remain visible rather than percent-encoded.
+    return f"https://qstash.upstash.io/v2/schedules/{destination}"
 
 
 def main() -> None:
@@ -26,9 +31,8 @@ def main() -> None:
         raise SystemExit("The deployed APP_URL must start with https://")
 
     destination = f"{app_url}/api/cron"
-    encoded_destination = urllib.parse.quote(destination, safe="")
     request = urllib.request.Request(
-        f"https://qstash.upstash.io/v2/schedules/{encoded_destination}",
+        schedule_api_url(destination),
         data=b"{}",
         headers={
             "Authorization": f"Bearer {qstash_token}",

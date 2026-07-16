@@ -170,7 +170,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "bible_bot_content_planselection",
-      "community": 1,
+      "community": 3,
       "norm_label": "planselection"
     },
     {
@@ -300,7 +300,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "bible_bot_database_user",
-      "community": 1,
+      "community": 2,
       "norm_label": "user"
     },
     {
@@ -1330,7 +1330,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "bible_bot_scheduler_dailyscheduler_select",
-      "community": 1,
+      "community": 3,
       "norm_label": "._select()"
     },
     {
@@ -1340,7 +1340,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "bible_bot_scheduler_py_datetime",
-      "community": 1,
+      "community": 3,
       "norm_label": "datetime"
     },
     {
@@ -1350,7 +1350,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "bible_bot_scheduler_dailyscheduler_dispatch_user",
-      "community": 1,
+      "community": 3,
       "norm_label": "._dispatch_user()"
     },
     {
@@ -1390,7 +1390,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "bible_bot_time_utils_format_clock_time",
-      "community": 1,
+      "community": 4,
       "norm_label": "format_clock_time()"
     },
     {
@@ -1707,10 +1707,20 @@
       "norm_label": "configure_qstash.py"
     },
     {
+      "label": "schedule_api_url()",
+      "file_type": "code",
+      "source_file": "scripts/configure_qstash.py",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "scripts_configure_qstash_schedule_api_url",
+      "community": 13,
+      "norm_label": "schedule_api_url()"
+    },
+    {
       "label": "main()",
       "file_type": "code",
       "source_file": "scripts/configure_qstash.py",
-      "source_location": "L11",
+      "source_location": "L16",
       "_origin": "ast",
       "id": "scripts_configure_qstash_main",
       "community": 13,
@@ -1745,6 +1755,26 @@
       "id": "scripts_configure_telegram_main",
       "community": 12,
       "norm_label": "main()"
+    },
+    {
+      "label": "test_configure_qstash.py",
+      "file_type": "code",
+      "source_file": "tests/test_configure_qstash.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_test_configure_qstash",
+      "community": 13,
+      "norm_label": "test_configure_qstash.py"
+    },
+    {
+      "label": "test_schedule_destination_keeps_https_scheme_visible()",
+      "file_type": "code",
+      "source_file": "tests/test_configure_qstash.py",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "tests_test_configure_qstash_test_schedule_destination_keeps_https_scheme_visible",
+      "community": 13,
+      "norm_label": "test_schedule_destination_keeps_https_scheme_visible()"
     },
     {
       "label": "test_content.py",
@@ -1813,7 +1843,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_database",
-      "community": 3,
+      "community": 11,
       "norm_label": "test_database.py"
     },
     {
@@ -1823,7 +1853,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_test_database_database",
-      "community": 3,
+      "community": 11,
       "norm_label": "database()"
     },
     {
@@ -1833,7 +1863,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "tests_test_database_test_user_schedule_and_delivery_claim",
-      "community": 3,
+      "community": 11,
       "norm_label": "test_user_schedule_and_delivery_claim()"
     },
     {
@@ -1843,7 +1873,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "tests_test_database_test_favorites_toggle",
-      "community": 3,
+      "community": 11,
       "norm_label": "test_favorites_toggle()"
     },
     {
@@ -1853,7 +1883,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "tests_test_database_test_plan_anchor_is_stable",
-      "community": 3,
+      "community": 11,
       "norm_label": "test_plan_anchor_is_stable()"
     },
     {
@@ -1863,7 +1893,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "tests_test_database_test_pending_input_survives_and_can_be_cleared",
-      "community": 3,
+      "community": 11,
       "norm_label": "test_pending_input_survives_and_can_be_cleared()"
     },
     {
@@ -1873,7 +1903,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "tests_test_database_test_telegram_update_is_claimed_once",
-      "community": 3,
+      "community": 11,
       "norm_label": "test_telegram_update_is_claimed_once()"
     },
     {
@@ -1883,7 +1913,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "tests_test_database_test_scheduler_lock_has_an_owner_and_expiry",
-      "community": 3,
+      "community": 11,
       "norm_label": "test_scheduler_lock_has_an_owner_and_expiry()"
     },
     {
@@ -6994,11 +7024,43 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/configure_qstash.py",
-      "source_location": "L11",
+      "source_location": "L16",
       "weight": 1.0,
       "source": "scripts_configure_qstash",
       "target": "scripts_configure_qstash_main",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/configure_qstash.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "scripts_configure_qstash",
+      "target": "scripts_configure_qstash_schedule_api_url",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/configure_qstash.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "source": "scripts_configure_qstash_main",
+      "target": "scripts_configure_qstash_schedule_api_url",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_configure_qstash.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "tests_test_configure_qstash_test_schedule_destination_keeps_https_scheme_visible",
+      "target": "scripts_configure_qstash_schedule_api_url"
     },
     {
       "relation": "contains",
@@ -7029,6 +7091,16 @@
       "weight": 1.0,
       "source": "scripts_configure_telegram_main",
       "target": "scripts_configure_telegram_telegram_call",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_configure_qstash.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "tests_test_configure_qstash",
+      "target": "tests_test_configure_qstash_test_schedule_destination_keeps_https_scheme_visible",
       "confidence_score": 1.0
     },
     {
@@ -7553,5 +7625,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "900b105b599a06e270d9f9d9a269d83efa4270cd"
+  "built_at_commit": "cb7111e5626bfa47cbacf3b77162f0181853c2d9"
 }

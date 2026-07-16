@@ -1,16 +1,16 @@
-# Graph Report - bible-bot  (2026-07-16)
+# Graph Report - bible-bot  (2026-07-17)
 
 ## Corpus Check
-- 28 files · ~149,431 words
+- 29 files · ~149,488 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 221 nodes · 502 edges · 13 communities (10 shown, 3 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.54)
+- 224 nodes · 506 edges · 14 communities (11 shown, 3 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 18 edges (avg confidence: 0.55)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `900b105b`
+- Built from commit: `cb7111e5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -26,7 +26,9 @@
 - __init__.py
 - bible-bot
 - app.py
+- test_database.py
 - configure_telegram.py
+- configure_qstash.py
 
 ## God Nodes (most connected - your core abstractions)
 1. `PostgresDatabase` - 34 edges
@@ -43,39 +45,39 @@
 ## Surprising Connections (you probably didn't know these)
 - `FakeBot` --uses--> `BibleCatalog`  [INFERRED]
   tests/test_scheduler.py → bible_bot/content.py
+- `database()` --calls--> `Database`  [EXTRACTED]
+  tests/test_database.py → bible_bot/database.py
 - `FakeBot` --uses--> `Database`  [INFERRED]
   tests/test_scheduler.py → bible_bot/database.py
 - `FakeBot` --uses--> `DailyScheduler`  [INFERRED]
   tests/test_scheduler.py → bible_bot/scheduler.py
 - `test_parse_clock_time()` --calls--> `parse_clock_time()`  [EXTRACTED]
   tests/test_time_utils.py → bible_bot/time_utils.py
-- `test_parse_clock_time_rejects_invalid_value()` --calls--> `parse_clock_time()`  [EXTRACTED]
-  tests/test_time_utils.py → bible_bot/time_utils.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (13 total, 3 thin omitted)
+## Communities (14 total, 3 thin omitted)
 
 ### Community 0 - "Database"
 Cohesion: 0.09
 Nodes (6): date, datetime, Path, SQLiteDatabase, Connection, Row
 
 ### Community 1 - "handlers.py"
-Cohesion: 0.17
-Nodes (26): Passage, PlanSelection, User, create_router(), date, completion_keyboard(), confirmation_keyboard(), daily_verse_keyboard() (+18 more)
+Cohesion: 0.20
+Nodes (22): Passage, create_router(), date, completion_keyboard(), confirmation_keyboard(), daily_verse_keyboard(), settings_keyboard(), stop_confirmation_keyboard() (+14 more)
 
 ### Community 2 - "scheduler.py"
-Cohesion: 0.12
-Nodes (6): AsyncConnection, PendingInput, PostgresDatabase, date, datetime, Short-lived PostgreSQL connections suited to Neon PgBouncer.
+Cohesion: 0.13
+Nodes (7): AsyncConnection, PendingInput, User, PostgresDatabase, date, datetime, Short-lived PostgreSQL connections suited to Neon PgBouncer.
 
 ### Community 3 - "DailyScheduler"
-Cohesion: 0.13
-Nodes (18): main(), run(), Database, Select PostgreSQL for DATABASE_URL and SQLite for local development/tests., DailyScheduler, date, Bot, database() (+10 more)
+Cohesion: 0.16
+Nodes (13): main(), run(), PlanSelection, Database, Select PostgreSQL for DATABASE_URL and SQLite for local development/tests., DailyScheduler, date, datetime (+5 more)
 
 ### Community 4 - "next_delivery_at"
-Cohesion: 0.27
-Nodes (12): next_delivery_at(), normalize_timezone(), parse_clock_time(), datetime, Return the next local delivery time converted to UTC.      ``force_tomorrow`` is, validate_timezone(), test_force_tomorrow_prevents_second_daily_message(), test_next_delivery_uses_local_timezone() (+4 more)
+Cohesion: 0.26
+Nodes (13): format_clock_time(), next_delivery_at(), normalize_timezone(), parse_clock_time(), datetime, Return the next local delivery time converted to UTC.      ``force_tomorrow`` is, validate_timezone(), test_force_tomorrow_prevents_second_daily_message() (+5 more)
 
 ### Community 5 - "BibleCatalog"
 Cohesion: 0.21
@@ -93,6 +95,14 @@ Nodes (11): build_bible(), build_plan(), clean_text(), covered_by_featured(), fe
 Cohesion: 0.16
 Nodes (13): Path, Settings, cron_get(), cron_post(), dispatch_due(), get_runtime(), _require_cron_secret(), _require_webhook_secret() (+5 more)
 
+### Community 11 - "test_database.py"
+Cohesion: 0.46
+Nodes (7): database(), test_favorites_toggle(), test_pending_input_survives_and_can_be_cleared(), test_plan_anchor_is_stable(), test_scheduler_lock_has_an_owner_and_expiry(), test_telegram_update_is_claimed_once(), test_user_schedule_and_delivery_claim()
+
+### Community 13 - "configure_qstash.py"
+Cohesion: 0.50
+Nodes (3): main(), schedule_api_url(), test_schedule_destination_keeps_https_scheme_visible()
+
 ## Knowledge Gaps
 - **13 isolated node(s):** `bible-bot`, `Data notices`, `Сценарий пользователя`, `Архитектура на Vercel`, `1. Neon` (+8 more)
   These have ≤1 connection - possible missing edges or undocumented components.
@@ -101,12 +111,12 @@ Nodes (13): Path, Settings, cron_get(), cron_post(), dispatch_due(), get_runtime
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PostgresDatabase` connect `scheduler.py` to `Database`, `handlers.py`, `DailyScheduler`?**
-  _High betweenness centrality (0.185) - this node is a cross-community bridge._
+- **Why does `PostgresDatabase` connect `scheduler.py` to `Database`, `DailyScheduler`?**
+  _High betweenness centrality (0.180) - this node is a cross-community bridge._
 - **Why does `SQLiteDatabase` connect `Database` to `scheduler.py`?**
-  _High betweenness centrality (0.164) - this node is a cross-community bridge._
-- **Why does `Database` connect `DailyScheduler` to `Database`, `handlers.py`, `scheduler.py`, `app.py`?**
-  _High betweenness centrality (0.146) - this node is a cross-community bridge._
+  _High betweenness centrality (0.159) - this node is a cross-community bridge._
+- **Why does `Database` connect `DailyScheduler` to `Database`, `handlers.py`, `scheduler.py`, `app.py`, `test_database.py`?**
+  _High betweenness centrality (0.142) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `PostgresDatabase` (e.g. with `Database` and `PendingInput`) actually correct?**
   _`PostgresDatabase` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 3 inferred relationships involving `BibleCatalog` (e.g. with `DailyScheduler` and `Runtime`) actually correct?**
