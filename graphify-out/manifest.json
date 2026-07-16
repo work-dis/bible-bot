@@ -1,0 +1,122 @@
+{
+  "bible_bot/__init__.py": {
+    "mtime": 1784231995.8453326,
+    "ast_hash": "4bbb3346f4a7903b0f8f455bc4d63bda",
+    "semantic_hash": ""
+  },
+  "bible_bot/__main__.py": {
+    "mtime": 1784231995.8455734,
+    "ast_hash": "689c0c9035aed93c629f27b85c1d6c29",
+    "semantic_hash": ""
+  },
+  "bible_bot/app.py": {
+    "mtime": 1784231814.7914379,
+    "ast_hash": "0d24ee33717af09bf0845fb2afca4875",
+    "semantic_hash": ""
+  },
+  "bible_bot/config.py": {
+    "mtime": 1784231995.8458683,
+    "ast_hash": "a922852757b9bea9846328502779efa1",
+    "semantic_hash": ""
+  },
+  "bible_bot/content.py": {
+    "mtime": 1784231995.8462284,
+    "ast_hash": "e86736fad63cb9022a6da7fac59c4224",
+    "semantic_hash": ""
+  },
+  "bible_bot/data/new_testament.json": {
+    "mtime": 1784231582.0405483,
+    "ast_hash": "9ee819c846b0f0c084598853fccef278",
+    "semantic_hash": ""
+  },
+  "bible_bot/data/reading_plan.json": {
+    "mtime": 1784231582.0412498,
+    "ast_hash": "dda8a6a14f01c2c243917f59d16b1a5b",
+    "semantic_hash": ""
+  },
+  "bible_bot/database.py": {
+    "mtime": 1784231469.895344,
+    "ast_hash": "640d813e58af53ed43ebb7812cc14310",
+    "semantic_hash": ""
+  },
+  "bible_bot/handlers.py": {
+    "mtime": 1784231995.8466413,
+    "ast_hash": "27a90691adb0885a87e72810cb045124",
+    "semantic_hash": ""
+  },
+  "bible_bot/keyboards.py": {
+    "mtime": 1784231995.8461459,
+    "ast_hash": "d7a1aaa273e854544cb4a836b096040c",
+    "semantic_hash": ""
+  },
+  "bible_bot/messages.py": {
+    "mtime": 1784231995.8342664,
+    "ast_hash": "a2f37b5cce7d1baed1a5c0534c2dde31",
+    "semantic_hash": ""
+  },
+  "bible_bot/scheduler.py": {
+    "mtime": 1784231995.8342764,
+    "ast_hash": "3586963d5358dab0deea615ec18cb613",
+    "semantic_hash": ""
+  },
+  "bible_bot/states.py": {
+    "mtime": 1784231995.8453403,
+    "ast_hash": "b6a0eee89034f66125caf29d3fd4053d",
+    "semantic_hash": ""
+  },
+  "bible_bot/time_utils.py": {
+    "mtime": 1784231995.8458784,
+    "ast_hash": "2263863b43029d224eda77152588b50d",
+    "semantic_hash": ""
+  },
+  "pyproject.toml": {
+    "mtime": 1784231469.8935645,
+    "ast_hash": "7d36e6657b1184c87a43a09e84da2295",
+    "semantic_hash": ""
+  },
+  "scripts/build_bible_data.py": {
+    "mtime": 1784231995.8460743,
+    "ast_hash": "db420555a1c3cb8ce37123cbbeecb697",
+    "semantic_hash": ""
+  },
+  "tests/test_content.py": {
+    "mtime": 1784231995.8453646,
+    "ast_hash": "827545720785bb4fee6de54865065e3c",
+    "semantic_hash": ""
+  },
+  "tests/test_database.py": {
+    "mtime": 1784231995.8453603,
+    "ast_hash": "194ba9a4bb8581bde31621f902239e47",
+    "semantic_hash": ""
+  },
+  "tests/test_scheduler.py": {
+    "mtime": 1784231995.834273,
+    "ast_hash": "e20fdb42fbf084bb38b7127f089668be",
+    "semantic_hash": ""
+  },
+  "tests/test_time_utils.py": {
+    "mtime": 1784231995.845538,
+    "ast_hash": "d6da678da3c89cf96008fe1ab4a07ed0",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1784231912.4565814,
+    "ast_hash": "1393e92a7d6f157c55bc8dc42dfbf73c",
+    "semantic_hash": ""
+  },
+  "NOTICE.md": {
+    "mtime": 1784231573.6363862,
+    "ast_hash": "9cff55a6d8d9aadd4dfd0b80f1a86744",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1784231912.4556894,
+    "ast_hash": "a82af65ec1a22e7e298ab5b30277a77c",
+    "semantic_hash": ""
+  },
+  "compose.yaml": {
+    "mtime": 1784231912.4561527,
+    "ast_hash": "6384e872b6299708b0004d44445855c0",
+    "semantic_hash": ""
+  }
+}
