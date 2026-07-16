@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app import _same_secret, app
+from bible_bot.vercel_app import _same_secret, app
 
 
 def test_health_does_not_require_runtime_secrets(monkeypatch) -> None:

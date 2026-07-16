@@ -105,13 +105,13 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1784233196.1432936,
-    "ast_hash": "3d335803cf288804fb73fc10467d02fd",
+    "mtime": 1784233404.3861256,
+    "ast_hash": "84776e087c9de538eeec849415a1c642",
     "semantic_hash": ""
   },
   "app.py": {
-    "mtime": 1784233058.2820168,
-    "ast_hash": "678b5f6a5cfbb814c8cce76c0e6644fd",
+    "mtime": 1784233408.4402761,
+    "ast_hash": "4ad9d8ac0dbc436cdebfe74718704a3b",
     "semantic_hash": ""
   },
   "bible_bot/postgres_database.py": {
@@ -135,8 +135,13 @@
     "semantic_hash": ""
   },
   "tests/test_vercel_app.py": {
-    "mtime": 1784233113.9930134,
-    "ast_hash": "263c26122719d74fc1dbed37dcc2a692",
+    "mtime": 1784233404.3857868,
+    "ast_hash": "7d4b589a8bf816ac78725eae062f8dd6",
+    "semantic_hash": ""
+  },
+  "bible_bot/vercel_app.py": {
+    "mtime": 1784233404.3851864,
+    "ast_hash": "678b5f6a5cfbb814c8cce76c0e6644fd",
     "semantic_hash": ""
   }
 }

@@ -153,6 +153,7 @@ python -m bible_bot
 app.py                       FastAPI entrypoint для Vercel
 bible_bot/
   app.py                     локальный long polling
+  vercel_app.py              webhook и cron API
   handlers.py                онбординг, настройки, избранное и циклы
   scheduler.py               ежедневная доставка
   database.py                SQLite и выбор backend

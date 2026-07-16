@@ -10,7 +10,6 @@
   "8": "__init__.py",
   "9": "bible-bot",
   "10": "app.py",
-  "11": "test_database.py",
   "12": "configure_telegram.py",
   "13": "configure_qstash.py"
 }
