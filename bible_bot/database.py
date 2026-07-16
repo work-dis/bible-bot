@@ -20,7 +20,13 @@ class User:
     next_send_at: datetime | None
 
 
-class Database:
+@dataclass(frozen=True, slots=True)
+class PendingInput:
+    action: str
+    origin: str
+
+
+class SQLiteDatabase:
     def __init__(self, path: Path) -> None:
         self.path = path
         self._connection: aiosqlite.Connection | None = None
@@ -69,6 +75,24 @@ class Database:
             CREATE TABLE IF NOT EXISTS app_state (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS user_input_state (
+                chat_id INTEGER PRIMARY KEY REFERENCES users(chat_id) ON DELETE CASCADE,
+                action TEXT NOT NULL,
+                origin TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS telegram_updates (
+                update_id INTEGER PRIMARY KEY,
+                received_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS scheduler_locks (
+                name TEXT PRIMARY KEY,
+                owner TEXT NOT NULL,
+                expires_at TEXT NOT NULL
             );
 
             CREATE INDEX IF NOT EXISTS users_due_idx
@@ -328,6 +352,80 @@ class Database:
         row = await cursor.fetchone()
         return int(row["count"])
 
+    async def set_pending_input(self, chat_id: int, action: str, origin: str) -> None:
+        async with self._lock:
+            await self.connection.execute(
+                """
+                INSERT INTO user_input_state (chat_id, action, origin, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(chat_id) DO UPDATE SET
+                    action = excluded.action,
+                    origin = excluded.origin,
+                    updated_at = excluded.updated_at
+                """,
+                (chat_id, action, origin, datetime.now(UTC).isoformat()),
+            )
+            await self.connection.commit()
+
+    async def get_pending_input(self, chat_id: int) -> PendingInput | None:
+        cursor = await self.connection.execute(
+            "SELECT action, origin FROM user_input_state WHERE chat_id = ?", (chat_id,)
+        )
+        row = await cursor.fetchone()
+        return PendingInput(action=row["action"], origin=row["origin"]) if row else None
+
+    async def clear_pending_input(self, chat_id: int) -> None:
+        async with self._lock:
+            await self.connection.execute(
+                "DELETE FROM user_input_state WHERE chat_id = ?", (chat_id,)
+            )
+            await self.connection.commit()
+
+    async def claim_telegram_update(self, update_id: int) -> bool:
+        async with self._lock:
+            cursor = await self.connection.execute(
+                "INSERT OR IGNORE INTO telegram_updates VALUES (?, ?)",
+                (update_id, datetime.now(UTC).isoformat()),
+            )
+            await self.connection.commit()
+            return cursor.rowcount == 1
+
+    async def release_telegram_update(self, update_id: int) -> None:
+        async with self._lock:
+            await self.connection.execute(
+                "DELETE FROM telegram_updates WHERE update_id = ?", (update_id,)
+            )
+            await self.connection.commit()
+
+    async def acquire_scheduler_lock(
+        self,
+        owner: str,
+        now: datetime,
+        expires_at: datetime,
+    ) -> bool:
+        async with self._lock:
+            cursor = await self.connection.execute(
+                """
+                INSERT INTO scheduler_locks (name, owner, expires_at)
+                VALUES ('daily-delivery', ?, ?)
+                ON CONFLICT(name) DO UPDATE SET
+                    owner = excluded.owner,
+                    expires_at = excluded.expires_at
+                WHERE scheduler_locks.expires_at <= ?
+                """,
+                (owner, expires_at.isoformat(), now.isoformat()),
+            )
+            await self.connection.commit()
+            return cursor.rowcount == 1
+
+    async def release_scheduler_lock(self, owner: str) -> None:
+        async with self._lock:
+            await self.connection.execute(
+                "DELETE FROM scheduler_locks WHERE name = 'daily-delivery' AND owner = ?",
+                (owner,),
+            )
+            await self.connection.commit()
+
     async def get_or_create_plan_anchor(self, today: date) -> date:
         async with self._lock:
             await self.connection.execute(
@@ -354,3 +452,19 @@ class Database:
             mode_position=row["mode_position"],
             next_send_at=next_send_at,
         )
+
+
+class Database:
+    """Select PostgreSQL for DATABASE_URL and SQLite for local development/tests."""
+
+    def __init__(self, location: str | Path) -> None:
+        value = str(location)
+        if value.startswith(("postgresql://", "postgres://")):
+            from bible_bot.postgres_database import PostgresDatabase
+
+            self._backend = PostgresDatabase(value)
+        else:
+            self._backend = SQLiteDatabase(Path(location))
+
+    def __getattr__(self, name: str):
+        return getattr(self._backend, name)

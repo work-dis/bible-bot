@@ -53,3 +53,37 @@ async def test_plan_anchor_is_stable(database: Database) -> None:
     first = await database.get_or_create_plan_anchor(date(2026, 7, 16))
     second = await database.get_or_create_plan_anchor(date(2030, 1, 1))
     assert first == second == date(2026, 7, 16)
+
+
+async def test_pending_input_survives_and_can_be_cleared(database: Database) -> None:
+    await database.ensure_user(8, "Пётр", "Europe/Minsk", "09:00")
+    await database.set_pending_input(8, "time", "start")
+
+    pending = await database.get_pending_input(8)
+    assert pending.action == "time"
+    assert pending.origin == "start"
+
+    await database.clear_pending_input(8)
+    assert await database.get_pending_input(8) is None
+
+
+async def test_telegram_update_is_claimed_once(database: Database) -> None:
+    assert await database.claim_telegram_update(12345) is True
+    assert await database.claim_telegram_update(12345) is False
+
+    await database.release_telegram_update(12345)
+    assert await database.claim_telegram_update(12345) is True
+
+
+async def test_scheduler_lock_has_an_owner_and_expiry(database: Database) -> None:
+    now = datetime(2026, 7, 16, 12, 0, tzinfo=UTC)
+    expires_at = datetime(2026, 7, 16, 12, 10, tzinfo=UTC)
+
+    assert await database.acquire_scheduler_lock("first", now, expires_at) is True
+    assert await database.acquire_scheduler_lock("second", now, expires_at) is False
+
+    await database.release_scheduler_lock("second")
+    assert await database.acquire_scheduler_lock("second", now, expires_at) is False
+
+    await database.release_scheduler_lock("first")
+    assert await database.acquire_scheduler_lock("second", now, expires_at) is True

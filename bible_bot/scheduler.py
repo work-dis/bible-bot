@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -53,10 +54,24 @@ class DailyScheduler:
                 continue
         logger.info("Daily scheduler stopped")
 
-    async def dispatch_due(self) -> None:
+    async def dispatch_due(self) -> int:
         now = datetime.now(UTC)
-        for user in await self.database.get_due_users(now):
-            await self._dispatch_user(user, now)
+        owner = uuid.uuid4().hex
+        acquired = await self.database.acquire_scheduler_lock(
+            owner,
+            now,
+            now + timedelta(minutes=10),
+        )
+        if not acquired:
+            logger.info("Another scheduler invocation owns the delivery lock")
+            return 0
+        try:
+            users = await self.database.get_due_users(now)
+            for user in users:
+                await self._dispatch_user(user, now)
+            return len(users)
+        finally:
+            await self.database.release_scheduler_lock(owner)
 
     def _select(self, user: User, now: datetime) -> tuple[date, PlanSelection]:
         local_date = now.astimezone(ZoneInfo(user.timezone)).date()

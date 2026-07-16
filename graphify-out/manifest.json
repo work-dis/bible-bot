@@ -10,13 +10,13 @@
     "semantic_hash": ""
   },
   "bible_bot/app.py": {
-    "mtime": 1784231814.7914379,
-    "ast_hash": "0d24ee33717af09bf0845fb2afca4875",
+    "mtime": 1784232621.4687471,
+    "ast_hash": "1bbd50012fcb513d85ec9ca17fe24b5e",
     "semantic_hash": ""
   },
   "bible_bot/config.py": {
-    "mtime": 1784231995.8458683,
-    "ast_hash": "a922852757b9bea9846328502779efa1",
+    "mtime": 1784232621.468085,
+    "ast_hash": "86ec70b59757d149e88ca019c5412ada",
     "semantic_hash": ""
   },
   "bible_bot/content.py": {
@@ -35,13 +35,13 @@
     "semantic_hash": ""
   },
   "bible_bot/database.py": {
-    "mtime": 1784231469.895344,
-    "ast_hash": "640d813e58af53ed43ebb7812cc14310",
+    "mtime": 1784233185.2642298,
+    "ast_hash": "f59b004771229ea48771b87d19c848c8",
     "semantic_hash": ""
   },
   "bible_bot/handlers.py": {
-    "mtime": 1784231995.8466413,
-    "ast_hash": "27a90691adb0885a87e72810cb045124",
+    "mtime": 1784233058.2823093,
+    "ast_hash": "b5e3d58f5eb9cece774d31bc9e4f36b5",
     "semantic_hash": ""
   },
   "bible_bot/keyboards.py": {
@@ -55,13 +55,8 @@
     "semantic_hash": ""
   },
   "bible_bot/scheduler.py": {
-    "mtime": 1784231995.8342764,
-    "ast_hash": "3586963d5358dab0deea615ec18cb613",
-    "semantic_hash": ""
-  },
-  "bible_bot/states.py": {
-    "mtime": 1784231995.8453403,
-    "ast_hash": "b6a0eee89034f66125caf29d3fd4053d",
+    "mtime": 1784233185.2652512,
+    "ast_hash": "c283c747cc0be89b60162064c1d4e6f3",
     "semantic_hash": ""
   },
   "bible_bot/time_utils.py": {
@@ -70,8 +65,8 @@
     "semantic_hash": ""
   },
   "pyproject.toml": {
-    "mtime": 1784231469.8935645,
-    "ast_hash": "7d36e6657b1184c87a43a09e84da2295",
+    "mtime": 1784232886.2584276,
+    "ast_hash": "5df2c23e3fd5f089c7cfa0d9afe126b3",
     "semantic_hash": ""
   },
   "scripts/build_bible_data.py": {
@@ -85,13 +80,13 @@
     "semantic_hash": ""
   },
   "tests/test_database.py": {
-    "mtime": 1784231995.8453603,
-    "ast_hash": "194ba9a4bb8581bde31621f902239e47",
+    "mtime": 1784233196.1429584,
+    "ast_hash": "0fc554eccbdb8fc8807edb07cbcddb41",
     "semantic_hash": ""
   },
   "tests/test_scheduler.py": {
-    "mtime": 1784231995.834273,
-    "ast_hash": "e20fdb42fbf084bb38b7127f089668be",
+    "mtime": 1784233105.7839587,
+    "ast_hash": "98cdfb649d23f342632736ab9b72838d",
     "semantic_hash": ""
   },
   "tests/test_time_utils.py": {
@@ -110,13 +105,38 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1784231912.4556894,
-    "ast_hash": "a82af65ec1a22e7e298ab5b30277a77c",
+    "mtime": 1784233196.1432936,
+    "ast_hash": "3d335803cf288804fb73fc10467d02fd",
     "semantic_hash": ""
   },
-  "compose.yaml": {
-    "mtime": 1784231912.4561527,
-    "ast_hash": "6384e872b6299708b0004d44445855c0",
+  "app.py": {
+    "mtime": 1784233058.2820168,
+    "ast_hash": "678b5f6a5cfbb814c8cce76c0e6644fd",
+    "semantic_hash": ""
+  },
+  "bible_bot/postgres_database.py": {
+    "mtime": 1784233185.2646544,
+    "ast_hash": "c4907986c176b2f034c972cb7b90063c",
+    "semantic_hash": ""
+  },
+  "scripts/configure_qstash.py": {
+    "mtime": 1784232977.007512,
+    "ast_hash": "f73d15ff46faea315736bd4860b90a1f",
+    "semantic_hash": ""
+  },
+  "scripts/configure_telegram.py": {
+    "mtime": 1784233058.281913,
+    "ast_hash": "04ce0ec1f1dd2b0f3376cef362d8926c",
+    "semantic_hash": ""
+  },
+  "sql/schema.sql": {
+    "mtime": 1784233185.2655947,
+    "ast_hash": "07a792d690541818552165c34f218c14",
+    "semantic_hash": ""
+  },
+  "tests/test_vercel_app.py": {
+    "mtime": 1784233113.9930134,
+    "ast_hash": "263c26122719d74fc1dbed37dcc2a692",
     "semantic_hash": ""
   }
 }

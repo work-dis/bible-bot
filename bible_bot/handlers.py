@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bible_bot.config import Settings
@@ -33,7 +32,6 @@ from bible_bot.messages import (
     verse_text,
     welcome_text,
 )
-from bible_bot.states import ScheduleInput
 from bible_bot.time_utils import (
     format_clock_time,
     next_delivery_at,
@@ -115,9 +113,9 @@ def create_router(
         await message.answer(favorites_text(passages))
 
     @router.message(CommandStart())
-    async def start(message: Message, state: FSMContext) -> None:
-        await state.clear()
+    async def start(message: Message) -> None:
         user = await ensure_message_user(message)
+        await database.clear_pending_input(user.chat_id)
         if user.status in {"active", "paused"}:
             await show_settings_message(message, user)
             return
@@ -135,7 +133,7 @@ def create_router(
         await show_confirmation(query)
 
     @router.callback_query(F.data == "start:confirm")
-    async def confirm_start(query: CallbackQuery, state: FSMContext) -> None:
+    async def confirm_start(query: CallbackQuery) -> None:
         await query.answer()
         user = await require_callback_user(query)
         next_at = next_delivery_at(
@@ -152,7 +150,7 @@ def create_router(
             next_send_at=next_at,
         )
         user = await database.get_user(user.chat_id)
-        await state.clear()
+        await database.clear_pending_input(user.chat_id)
         await query.message.edit_text(activated_text(user))
         await send_global_today(query.message, user.chat_id, user.timezone)
 
@@ -180,6 +178,7 @@ def create_router(
             next_send_at=next_at,
             update_next_send=update_next,
         )
+        await database.clear_pending_input(user.chat_id)
         if origin == "start":
             await show_confirmation(query)
         else:
@@ -189,43 +188,14 @@ def create_router(
             )
 
     @router.callback_query(F.data.startswith("time:custom:"))
-    async def request_custom_time(query: CallbackQuery, state: FSMContext) -> None:
+    async def request_custom_time(query: CallbackQuery) -> None:
         await query.answer()
         origin = query.data.rsplit(":", 1)[1]
-        await state.set_state(ScheduleInput.custom_time)
-        await state.update_data(origin=origin)
+        user = await require_callback_user(query)
+        await database.set_pending_input(user.chat_id, "time", origin)
         await query.message.edit_text(
             "Напиши время в формате <b>ЧЧ:ММ</b>, например <code>08:30</code>."
         )
-
-    @router.message(ScheduleInput.custom_time)
-    async def receive_custom_time(message: Message, state: FSMContext) -> None:
-        user = await ensure_message_user(message)
-        try:
-            clock = format_clock_time(parse_clock_time(message.text or ""))
-        except ValueError as exc:
-            await message.answer(str(exc))
-            return
-        state_data = await state.get_data()
-        origin = state_data.get("origin", "settings")
-        next_at = None
-        update_next = user.status == "active"
-        if update_next:
-            next_at = next_delivery_at(user.timezone, clock, now_utc=datetime.now(UTC))
-        await database.update_schedule(
-            user.chat_id,
-            send_time=clock,
-            next_send_at=next_at,
-            update_next_send=update_next,
-        )
-        await state.clear()
-        user = await database.get_user(user.chat_id)
-        if origin == "start":
-            await message.answer(
-                schedule_confirmation_text(user), reply_markup=confirmation_keyboard()
-            )
-        else:
-            await show_settings_message(message, user)
 
     @router.callback_query(F.data.startswith("tz:menu:"))
     async def show_timezone_menu(query: CallbackQuery) -> None:
@@ -251,6 +221,7 @@ def create_router(
             next_send_at=next_at,
             update_next_send=update_next,
         )
+        await database.clear_pending_input(user.chat_id)
         if origin == "start":
             await show_confirmation(query)
         else:
@@ -260,44 +231,15 @@ def create_router(
             )
 
     @router.callback_query(F.data.startswith("tz:custom:"))
-    async def request_custom_timezone(query: CallbackQuery, state: FSMContext) -> None:
+    async def request_custom_timezone(query: CallbackQuery) -> None:
         await query.answer()
         origin = query.data.rsplit(":", 1)[1]
-        await state.set_state(ScheduleInput.custom_timezone)
-        await state.update_data(origin=origin)
+        user = await require_callback_user(query)
+        await database.set_pending_input(user.chat_id, "timezone", origin)
         await query.message.edit_text(
             "Напиши город или часовой пояс, например <code>Минск</code> "
             "или <code>Europe/Minsk</code>."
         )
-
-    @router.message(ScheduleInput.custom_timezone)
-    async def receive_custom_timezone(message: Message, state: FSMContext) -> None:
-        user = await ensure_message_user(message)
-        try:
-            timezone_name = normalize_timezone(message.text or "")
-        except ValueError as exc:
-            await message.answer(str(exc))
-            return
-        state_data = await state.get_data()
-        origin = state_data.get("origin", "settings")
-        next_at = None
-        update_next = user.status == "active"
-        if update_next:
-            next_at = next_delivery_at(timezone_name, user.send_time, now_utc=datetime.now(UTC))
-        await database.update_schedule(
-            user.chat_id,
-            timezone=timezone_name,
-            next_send_at=next_at,
-            update_next_send=update_next,
-        )
-        await state.clear()
-        user = await database.get_user(user.chat_id)
-        if origin == "start":
-            await message.answer(
-                schedule_confirmation_text(user), reply_markup=confirmation_keyboard()
-            )
-        else:
-            await show_settings_message(message, user)
 
     @router.message(Command("settings"))
     async def settings_command(message: Message) -> None:
@@ -457,5 +399,60 @@ def create_router(
     @router.message(Command("help"))
     async def help_command(message: Message) -> None:
         await message.answer(HELP_TEXT)
+
+    @router.message(F.text)
+    async def receive_pending_input(message: Message) -> None:
+        user = await ensure_message_user(message)
+        pending = await database.get_pending_input(user.chat_id)
+        if pending is None:
+            await message.answer("Открой настройки командой /settings или начни с /start.")
+            return
+
+        try:
+            if pending.action == "time":
+                clock = format_clock_time(parse_clock_time(message.text or ""))
+                next_at = None
+                update_next = user.status == "active"
+                if update_next:
+                    next_at = next_delivery_at(user.timezone, clock, now_utc=datetime.now(UTC))
+                await database.update_schedule(
+                    user.chat_id,
+                    send_time=clock,
+                    next_send_at=next_at,
+                    update_next_send=update_next,
+                )
+            elif pending.action == "timezone":
+                timezone_name = normalize_timezone(message.text or "")
+                next_at = None
+                update_next = user.status == "active"
+                if update_next:
+                    next_at = next_delivery_at(
+                        timezone_name, user.send_time, now_utc=datetime.now(UTC)
+                    )
+                await database.update_schedule(
+                    user.chat_id,
+                    timezone=timezone_name,
+                    next_send_at=next_at,
+                    update_next_send=update_next,
+                )
+            else:
+                await database.clear_pending_input(user.chat_id)
+                await message.answer("Не удалось продолжить настройку. Попробуй /settings.")
+                return
+        except ValueError as exc:
+            await message.answer(str(exc))
+            return
+
+        await database.clear_pending_input(user.chat_id)
+        updated_user = await database.get_user(user.chat_id)
+        if updated_user is None:
+            raise RuntimeError("User disappeared while updating schedule")
+        if pending.origin == "start":
+            await message.answer(
+                schedule_confirmation_text(updated_user),
+                reply_markup=confirmation_keyboard(),
+            )
+        else:
+            await show_settings_message(message, updated_user)
 
     return router

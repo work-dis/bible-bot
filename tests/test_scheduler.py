@@ -40,8 +40,8 @@ async def test_scheduler_sends_once_and_advances(database: Database) -> None:
         anchor_date=date(2026, 7, 16),
         poll_seconds=30,
     )
-    await scheduler.dispatch_due()
-    await scheduler.dispatch_due()
+    assert await scheduler.dispatch_due() == 1
+    assert await scheduler.dispatch_due() == 0
 
     assert len(fake_bot.messages) == 1
     assert "Синодальный перевод" in fake_bot.messages[0][1]

@@ -26,7 +26,7 @@ async def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    database = Database(settings.database_path)
+    database = Database(settings.database_location)
     await database.connect()
     anchor_today = datetime.now(ZoneInfo(settings.default_timezone)).date()
     anchor_date = await database.get_or_create_plan_anchor(anchor_today)

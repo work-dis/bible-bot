@@ -11,11 +11,14 @@ from bible_bot.time_utils import parse_clock_time, validate_timezone
 @dataclass(frozen=True, slots=True)
 class Settings:
     bot_token: str
+    database_url: str | None
     database_path: Path
     data_dir: Path
     default_time: time
     default_timezone: str
     scheduler_poll_seconds: int
+    telegram_webhook_secret: str | None
+    cron_secret: str | None
     log_level: str
 
     @classmethod
@@ -35,10 +38,17 @@ class Settings:
 
         return cls(
             bot_token=token,
+            database_url=os.getenv("DATABASE_URL", "").strip() or None,
             database_path=database_path,
             data_dir=package_dir / "data",
             default_time=parse_clock_time(os.getenv("DEFAULT_TIME", "09:00")),
             default_timezone=default_timezone,
             scheduler_poll_seconds=poll_seconds,
+            telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip() or None,
+            cron_secret=os.getenv("CRON_SECRET", "").strip() or None,
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )
+
+    @property
+    def database_location(self) -> str | Path:
+        return self.database_url or self.database_path
