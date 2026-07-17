@@ -54,13 +54,13 @@ def timezone_keyboard(origin: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def daily_chapter_keyboard(reference_key: str, *, saved: bool = False) -> InlineKeyboardMarkup:
+def daily_chapter_keyboard(chapter_key: str, *, saved: bool = False) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text="❤️ Глава сохранена" if saved else "🤍 Сохранить главу",
-                    callback_data=f"favorite:{reference_key}",
+                    callback_data=f"favorite:{chapter_key}",
                 ),
                 InlineKeyboardButton(text="⚙️ Настройки", callback_data="settings:show"),
             ],

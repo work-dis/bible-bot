@@ -23,8 +23,8 @@ async def test_user_schedule_and_delivery_claim(database: Database) -> None:
     assert [item.chat_id for item in due] == [42]
 
     local_date = date(2026, 7, 17)
-    assert await database.claim_delivery(42, local_date, "JHN.3.16.17") is True
-    assert await database.claim_delivery(42, local_date, "JHN.3.16.17") is False
+    assert await database.claim_delivery(42, local_date, "JHN.3") is True
+    assert await database.claim_delivery(42, local_date, "JHN.3") is False
 
     following = datetime(2026, 7, 18, 6, 0, tzinfo=UTC)
     await database.complete_delivery(
@@ -42,10 +42,10 @@ async def test_user_schedule_and_delivery_claim(database: Database) -> None:
 
 async def test_favorites_toggle(database: Database) -> None:
     await database.ensure_user(7, "Анна", "Europe/Minsk", "09:00")
-    assert await database.toggle_favorite(7, "ROM.8.28.28") is True
-    assert await database.is_favorite(7, "ROM.8.28.28") is True
+    assert await database.toggle_favorite(7, "ROM.8") is True
+    assert await database.is_favorite(7, "ROM.8") is True
     assert await database.favorite_count(7) == 1
-    assert await database.toggle_favorite(7, "ROM.8.28.28") is False
+    assert await database.toggle_favorite(7, "ROM.8") is False
     assert await database.favorite_count(7) == 0
 
 

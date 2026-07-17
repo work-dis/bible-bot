@@ -26,7 +26,6 @@ from bible_bot.messages import (
     activated_text,
     chapter_messages,
     completion_text,
-    context_text,
     favorites_text,
     schedule_confirmation_text,
     settings_text,
@@ -91,10 +90,10 @@ def create_router(
         chat_id: int,
         selection: PlanSelection,
     ) -> None:
-        passage = catalog.get_passage(selection.passage_key)
-        saved = await database.is_favorite(chat_id, selection.passage_key)
+        chapter = catalog.get_chapter(selection.chapter_key)
+        saved = await database.is_favorite(chat_id, selection.chapter_key)
         parts = chapter_messages(
-            passage,
+            chapter,
             position=selection.position,
             cycle_size=selection.size,
         )
@@ -103,7 +102,7 @@ def create_router(
             await message.answer(
                 text,
                 reply_markup=(
-                    daily_chapter_keyboard(selection.passage_key, saved=saved)
+                    daily_chapter_keyboard(selection.chapter_key, saved=saved)
                     if is_last
                     else None
                 ),
@@ -124,8 +123,9 @@ def create_router(
 
     async def show_favorites_message(message: Message, chat_id: int) -> None:
         keys = await database.list_favorites(chat_id)
-        passages = [catalog.get_passage(key) for key in keys]
-        await message.answer(favorites_text(passages))
+        chapter_keys = list(dict.fromkeys(catalog.canonical_chapter_key(key) for key in keys))
+        chapters = [catalog.get_chapter(key) for key in chapter_keys]
+        await message.answer(favorites_text(chapters))
 
     @router.message(CommandStart())
     async def start(message: Message) -> None:
@@ -315,22 +315,14 @@ def create_router(
         user = await ensure_message_user(message)
         await send_global_today(message, user.chat_id, user.timezone)
 
-    @router.callback_query(F.data.startswith("context:"))
-    async def show_context(query: CallbackQuery) -> None:
-        await query.answer()
-        reference_key = query.data.partition(":")[2]
-        selected = catalog.get_passage(reference_key)
-        context = catalog.get_context(reference_key)
-        await query.message.answer(context_text(context, selected))
-
     @router.callback_query(F.data.startswith("favorite:"))
     async def toggle_favorite(query: CallbackQuery) -> None:
-        reference_key = query.data.partition(":")[2]
+        chapter_key = catalog.canonical_chapter_key(query.data.partition(":")[2])
         user = await require_callback_user(query)
-        saved = await database.toggle_favorite(user.chat_id, reference_key)
+        saved = await database.toggle_favorite(user.chat_id, chapter_key)
         await query.answer("Сохранено" if saved else "Удалено из сохранённых")
         await query.message.edit_reply_markup(
-            reply_markup=daily_chapter_keyboard(reference_key, saved=saved)
+            reply_markup=daily_chapter_keyboard(chapter_key, saved=saved)
         )
 
     @router.message(Command("favorites"))

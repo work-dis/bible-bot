@@ -86,7 +86,7 @@ class DailyScheduler:
     async def _dispatch_user(self, user: User, now: datetime) -> None:
         local_date, selection = self._select(user, now)
         claimed = await self.database.claim_delivery(
-            user.chat_id, local_date, selection.passage_key
+            user.chat_id, local_date, selection.chapter_key
         )
         next_at = next_delivery_at(
             user.timezone,
@@ -116,10 +116,10 @@ class DailyScheduler:
             )
             return
 
-        passage = self.catalog.get_passage(selection.passage_key)
-        saved = await self.database.is_favorite(user.chat_id, selection.passage_key)
+        chapter = self.catalog.get_chapter(selection.chapter_key)
+        saved = await self.database.is_favorite(user.chat_id, selection.chapter_key)
         parts = chapter_messages(
-            passage,
+            chapter,
             position=selection.position,
             cycle_size=selection.size,
         )
@@ -130,7 +130,7 @@ class DailyScheduler:
                     user.chat_id,
                     text,
                     reply_markup=(
-                        daily_chapter_keyboard(selection.passage_key, saved=saved)
+                        daily_chapter_keyboard(selection.chapter_key, saved=saved)
                         if is_last
                         else None
                     ),
