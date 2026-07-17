@@ -59,6 +59,14 @@ def daily_chapter_keyboard(chapter_key: str, *, saved: bool = False) -> InlineKe
         inline_keyboard=[
             [
                 InlineKeyboardButton(
+                    text="✍️ Выделить стихи", callback_data=f"verses:{chapter_key}"
+                ),
+                InlineKeyboardButton(
+                    text="💭 Написать размышления", callback_data=f"reflection:{chapter_key}"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
                     text="❤️ Глава сохранена" if saved else "🤍 Сохранить главу",
                     callback_data=f"favorite:{chapter_key}",
                 ),

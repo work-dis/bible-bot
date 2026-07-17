@@ -67,6 +67,17 @@ async def test_pending_input_survives_and_can_be_cleared(database: Database) -> 
     assert await database.get_pending_input(8) is None
 
 
+async def test_pending_verse_selection_can_advance_to_reflection(database: Database) -> None:
+    await database.ensure_user(9, "Анна", "Europe/Minsk", "09:00")
+    await database.set_pending_input(9, "verses", "JHN.3")
+    await database.set_pending_input(9, "reflection", "JHN.3|3,16")
+
+    pending = await database.get_pending_input(9)
+
+    assert pending.action == "reflection"
+    assert pending.origin == "JHN.3|3,16"
+
+
 async def test_telegram_update_is_claimed_once(database: Database) -> None:
     assert await database.claim_telegram_update(12345) is True
     assert await database.claim_telegram_update(12345) is False

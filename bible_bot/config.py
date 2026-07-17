@@ -19,6 +19,7 @@ class Settings:
     scheduler_poll_seconds: int
     telegram_webhook_secret: str | None
     cron_secret: str | None
+    public_channel_id: int | str | None
     log_level: str
 
     @classmethod
@@ -46,9 +47,21 @@ class Settings:
             scheduler_poll_seconds=poll_seconds,
             telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip() or None,
             cron_secret=os.getenv("CRON_SECRET", "").strip() or None,
+            public_channel_id=_parse_chat_id(os.getenv("PUBLIC_CHANNEL_ID", "")),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )
 
     @property
     def database_location(self) -> str | Path:
         return self.database_url or self.database_path
+
+
+def _parse_chat_id(value: str) -> int | str | None:
+    value = value.strip()
+    if not value:
+        return None
+    if value.lstrip("-").isdigit():
+        return int(value)
+    if value.startswith("@") and len(value) > 1:
+        return value
+    raise ValueError("PUBLIC_CHANNEL_ID must be a numeric chat id or start with @")

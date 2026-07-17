@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message
 
@@ -23,12 +25,18 @@ from bible_bot.keyboards import (
 )
 from bible_bot.messages import (
     HELP_TEXT,
+    TELEGRAM_CAPTION_LIMIT,
     activated_text,
     chapter_messages,
     completion_text,
     favorites_text,
+    parse_verse_selection,
+    public_reflection_text,
+    reflection_prompt_text,
     schedule_confirmation_text,
+    selected_verses_text,
     settings_text,
+    split_telegram_text,
     welcome_text,
 )
 from bible_bot.time_utils import (
@@ -37,6 +45,20 @@ from bible_bot.time_utils import (
     normalize_timezone,
     parse_clock_time,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _reflection_origin(chapter_key: str, verse_numbers: tuple[int, ...] = ()) -> str:
+    numbers = ",".join(map(str, verse_numbers))
+    return f"{chapter_key}|{numbers}"
+
+
+def _parse_reflection_origin(origin: str) -> tuple[str, tuple[int, ...]]:
+    chapter_key, separator, numbers = origin.partition("|")
+    if not separator:
+        return chapter_key, ()
+    return chapter_key, tuple(int(value) for value in numbers.split(",") if value)
 
 
 def create_router(
@@ -325,6 +347,35 @@ def create_router(
             reply_markup=daily_chapter_keyboard(chapter_key, saved=saved)
         )
 
+    @router.callback_query(F.data.startswith("verses:"))
+    async def request_verse_selection(query: CallbackQuery) -> None:
+        await query.answer()
+        chapter_key = catalog.canonical_chapter_key(query.data.partition(":")[2])
+        user = await require_callback_user(query)
+        await database.set_pending_input(user.chat_id, "verses", chapter_key)
+        await query.message.answer(
+            "✍️ <b>Какие стихи хочешь выделить?</b>\n\n"
+            "Впиши номера через запятую или диапазоном. Например: "
+            "<code>3, 5–8, 16</code>."
+        )
+
+    @router.callback_query(F.data.startswith("reflection:"))
+    async def request_reflection(query: CallbackQuery) -> None:
+        await query.answer()
+        chapter_key = catalog.canonical_chapter_key(query.data.partition(":")[2])
+        chapter = catalog.get_chapter(chapter_key)
+        user = await require_callback_user(query)
+        origin = _reflection_origin(chapter_key)
+        pending = await database.get_pending_input(user.chat_id)
+        if pending is not None and pending.action == "reflection":
+            pending_chapter_key, _ = _parse_reflection_origin(pending.origin)
+            if pending_chapter_key == chapter_key:
+                origin = pending.origin
+        await database.set_pending_input(
+            user.chat_id, "reflection", origin
+        )
+        await query.message.answer(reflection_prompt_text(chapter))
+
     @router.message(Command("favorites"))
     async def favorites_command(message: Message) -> None:
         user = await ensure_message_user(message)
@@ -407,8 +458,8 @@ def create_router(
     async def help_command(message: Message) -> None:
         await message.answer(HELP_TEXT)
 
-    @router.message(F.text)
-    async def receive_pending_input(message: Message) -> None:
+    @router.message(F.text | F.voice | F.audio | F.video | F.video_note)
+    async def receive_pending_input(message: Message, bot: Bot) -> None:
         user = await ensure_message_user(message)
         pending = await database.get_pending_input(user.chat_id)
         if pending is None:
@@ -417,6 +468,9 @@ def create_router(
 
         try:
             if pending.action == "time":
+                if message.text is None:
+                    await message.answer("Отправь время текстом в формате <b>ЧЧ:ММ</b>.")
+                    return
                 clock = format_clock_time(parse_clock_time(message.text or ""))
                 next_at = None
                 update_next = user.status == "active"
@@ -429,6 +483,9 @@ def create_router(
                     update_next_send=update_next,
                 )
             elif pending.action == "timezone":
+                if message.text is None:
+                    await message.answer("Отправь название города или часового пояса текстом.")
+                    return
                 timezone_name = normalize_timezone(message.text or "")
                 next_at = None
                 update_next = user.status == "active"
@@ -442,6 +499,79 @@ def create_router(
                     next_send_at=next_at,
                     update_next_send=update_next,
                 )
+            elif pending.action == "verses":
+                if message.text is None:
+                    await message.answer(
+                        "Впиши номера стихов текстом, например <code>3, 16</code>."
+                    )
+                    return
+                chapter = catalog.get_chapter(pending.origin)
+                verse_numbers = parse_verse_selection(message.text, chapter)
+                await database.set_pending_input(
+                    user.chat_id,
+                    "reflection",
+                    _reflection_origin(chapter.key, verse_numbers),
+                )
+                await message.answer(selected_verses_text(chapter, verse_numbers))
+                return
+            elif pending.action == "reflection":
+                if settings.public_channel_id is None:
+                    await message.answer(
+                        "Публичный канал пока не настроен, поэтому сообщение не опубликовано. "
+                        "Попробуй ещё раз позже."
+                    )
+                    return
+                chapter_key, verse_numbers = _parse_reflection_origin(pending.origin)
+                chapter = catalog.get_chapter(chapter_key)
+                raw_author = message.from_user.full_name if message.from_user else user.first_name
+                author = " ".join(raw_author.split()) or "Читатель"
+                body = message.text if message.text is not None else message.caption
+                publication = public_reflection_text(chapter, verse_numbers, author, body)
+                try:
+                    if message.text is not None:
+                        for part in split_telegram_text(publication):
+                            await bot.send_message(
+                                settings.public_channel_id,
+                                part,
+                                parse_mode=None,
+                            )
+                    elif (
+                        message.video_note is not None
+                        or len(publication) > TELEGRAM_CAPTION_LIMIT
+                    ):
+                        for part in split_telegram_text(publication):
+                            await bot.send_message(
+                                settings.public_channel_id,
+                                part,
+                                parse_mode=None,
+                            )
+                        await bot.copy_message(
+                            chat_id=settings.public_channel_id,
+                            from_chat_id=message.chat.id,
+                            message_id=message.message_id,
+                        )
+                    else:
+                        await bot.copy_message(
+                            chat_id=settings.public_channel_id,
+                            from_chat_id=message.chat.id,
+                            message_id=message.message_id,
+                            caption=publication,
+                            parse_mode=None,
+                        )
+                except TelegramAPIError:
+                    logger.exception(
+                        "Could not publish reflection from chat_id=%s to channel=%s",
+                        user.chat_id,
+                        settings.public_channel_id,
+                    )
+                    await message.answer(
+                        "Не удалось опубликовать сообщение в канале. Оно не потеряно в чате — "
+                        "попробуй отправить его ещё раз позже."
+                    )
+                    return
+                await database.clear_pending_input(user.chat_id)
+                await message.answer("✅ Размышления опубликованы в открытом Telegram-канале.")
+                return
             else:
                 await database.clear_pending_input(user.chat_id)
                 await message.answer("Не удалось продолжить настройку. Попробуй /settings.")
