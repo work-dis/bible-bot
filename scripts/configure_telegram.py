@@ -8,9 +8,9 @@ import urllib.error
 import urllib.request
 
 COMMANDS = [
-    {"command": "today", "description": "Получить сегодняшний стих"},
+    {"command": "today", "description": "Получить сегодняшнюю главу"},
     {"command": "settings", "description": "Настройки рассылки"},
-    {"command": "favorites", "description": "Сохранённые стихи"},
+    {"command": "favorites", "description": "Сохранённые главы"},
     {"command": "pause", "description": "Приостановить рассылку"},
     {"command": "help", "description": "Справка"},
 ]

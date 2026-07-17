@@ -8,12 +8,12 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message
 
 from bible_bot.config import Settings
-from bible_bot.content import BibleCatalog
+from bible_bot.content import BibleCatalog, PlanSelection
 from bible_bot.database import Database, User
 from bible_bot.keyboards import (
     completion_keyboard,
     confirmation_keyboard,
-    daily_verse_keyboard,
+    daily_chapter_keyboard,
     settings_keyboard,
     stop_confirmation_keyboard,
     themes_keyboard,
@@ -24,12 +24,12 @@ from bible_bot.keyboards import (
 from bible_bot.messages import (
     HELP_TEXT,
     activated_text,
+    chapter_messages,
     completion_text,
     context_text,
     favorites_text,
     schedule_confirmation_text,
     settings_text,
-    verse_text,
     welcome_text,
 )
 from bible_bot.time_utils import (
@@ -86,13 +86,28 @@ def create_router(
             force_tomorrow=False,
         )
 
-    async def send_passage(message: Message, chat_id: int, reference_key: str) -> None:
-        passage = catalog.get_passage(reference_key)
-        saved = await database.is_favorite(chat_id, reference_key)
-        await message.answer(
-            verse_text(passage),
-            reply_markup=daily_verse_keyboard(reference_key, saved=saved),
+    async def send_chapter(
+        message: Message,
+        chat_id: int,
+        selection: PlanSelection,
+    ) -> None:
+        passage = catalog.get_passage(selection.passage_key)
+        saved = await database.is_favorite(chat_id, selection.passage_key)
+        parts = chapter_messages(
+            passage,
+            position=selection.position,
+            cycle_size=selection.size,
         )
+        for index, text in enumerate(parts):
+            is_last = index == len(parts) - 1
+            await message.answer(
+                text,
+                reply_markup=(
+                    daily_chapter_keyboard(selection.passage_key, saved=saved)
+                    if is_last
+                    else None
+                ),
+            )
 
     async def send_global_today(message: Message, chat_id: int, timezone_name: str) -> None:
         local_date = datetime.now(UTC).astimezone(ZoneInfo(timezone_name)).date()
@@ -102,7 +117,7 @@ def create_router(
             local_date=local_date,
             anchor_date=anchor_date,
         )
-        await send_passage(message, chat_id, selection.passage_key)
+        await send_chapter(message, chat_id, selection)
 
     async def show_settings_message(message: Message, user: User) -> None:
         await message.answer(settings_text(user), reply_markup=settings_keyboard(user.status))
@@ -159,7 +174,7 @@ def create_router(
         await query.answer()
         origin = query.data.rsplit(":", 1)[1]
         await query.message.edit_text(
-            "Когда тебе удобнее получать стих?", reply_markup=time_keyboard(origin)
+            "Когда тебе удобнее получать главу?", reply_markup=time_keyboard(origin)
         )
 
     @router.callback_query(F.data.startswith("time:set:"))
@@ -284,7 +299,7 @@ def create_router(
     async def stop_confirm(query: CallbackQuery) -> None:
         await query.answer()
         await query.message.edit_text(
-            "Отключить ежедневную рассылку? Сохранённые стихи останутся.",
+            "Отключить ежедневную рассылку? Сохранённые главы останутся.",
             reply_markup=stop_confirmation_keyboard(),
         )
 
@@ -315,7 +330,7 @@ def create_router(
         saved = await database.toggle_favorite(user.chat_id, reference_key)
         await query.answer("Сохранено" if saved else "Удалено из сохранённых")
         await query.message.edit_reply_markup(
-            reply_markup=daily_verse_keyboard(reference_key, saved=saved)
+            reply_markup=daily_chapter_keyboard(reference_key, saved=saved)
         )
 
     @router.message(Command("favorites"))
@@ -345,7 +360,7 @@ def create_router(
             next_send_at=next_at,
         )
         await query.message.edit_text(
-            f"Готово 🌿\n\nВыбран режим: <b>{label}</b>. Следующий стих придёт завтра "
+            f"Готово 🌿\n\nВыбран режим: <b>{label}</b>. Следующая глава придёт завтра "
             f"в <b>{user.send_time}</b>."
         )
 
@@ -357,7 +372,7 @@ def create_router(
     @router.callback_query(F.data == "cycle:sequential")
     async def sequential_cycle(query: CallbackQuery) -> None:
         await query.answer()
-        await activate_cycle(query, "sequential", "стихи по порядку книг")
+        await activate_cycle(query, "sequential", "главы по порядку книг")
 
     @router.callback_query(F.data == "cycle:themes")
     async def choose_theme(query: CallbackQuery) -> None:

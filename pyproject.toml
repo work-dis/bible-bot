@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bible-bot"
 version = "0.1.0"
-description = "Telegram bot that sends a daily New Testament verse in the Russian Synodal translation"
+description = "Telegram bot that sends a daily New Testament chapter in the Russian Synodal translation"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

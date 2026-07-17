@@ -15,9 +15,12 @@ class Passage:
     verse_start: int
     verse_end: int
     verses: tuple[tuple[int, str], ...]
+    is_full_chapter: bool
 
     @property
     def reference(self) -> str:
+        if self.is_full_chapter:
+            return f"{self.book_name} {self.chapter}"
         suffix = str(self.verse_start)
         if self.verse_end != self.verse_start:
             suffix += f"–{self.verse_end}"
@@ -48,10 +51,16 @@ class BibleCatalog:
         self.meta = bible["_meta"]
         self.books: dict[str, dict] = bible["books"]
         self.book_order = list(self.books)
-        self.main_plan: list[str] = plan["main"]
         self.theme_labels: dict[str, str] = plan["theme_labels"]
-        self.themes: dict[str, list[str]] = plan["themes"]
-        self.sequential_plan = sorted(self.main_plan, key=self._sort_key)
+        self.main_plan: list[str] = plan["main"]
+        expected_plan = self._build_chapter_plan()
+        if self.main_plan != expected_plan:
+            raise ValueError("The main plan must contain every New Testament chapter in order")
+        self.themes = {
+            slug: list(dict.fromkeys(self.chapter_key(key) for key in entries))
+            for slug, entries in plan["themes"].items()
+        }
+        self.sequential_plan = list(self.main_plan)
 
         if not self.main_plan:
             raise ValueError("The reading plan is empty")
@@ -76,6 +85,14 @@ class BibleCatalog:
     def make_key(self, book_code: str, chapter: int, start: int, end: int | None = None) -> str:
         return f"{book_code}.{chapter}.{start}.{end or start}"
 
+    def chapter_key(self, key: str) -> str:
+        book_code, chapter, _, _ = self.parse_key(key)
+        try:
+            chapter_data = self.books[book_code]["chapters"][str(chapter)]
+        except KeyError as exc:
+            raise KeyError(f"Chapter does not exist for passage: {key}") from exc
+        return self.make_key(book_code, chapter, 1, max(map(int, chapter_data)))
+
     def get_passage(self, key: str) -> Passage:
         book_code, chapter, start, end = self.parse_key(key)
         try:
@@ -92,6 +109,7 @@ class BibleCatalog:
             verse_start=start,
             verse_end=end,
             verses=verses,
+            is_full_chapter=start == 1 and end == max(map(int, chapter_data)),
         )
 
     def get_context(self, key: str, radius: int = 2) -> Passage:
@@ -143,3 +161,13 @@ class BibleCatalog:
     def _sort_key(self, key: str) -> tuple[int, int, int, int]:
         book_code, chapter, start, end = self.parse_key(key)
         return self.book_order.index(book_code), chapter, start, end
+
+    def _build_chapter_plan(self) -> list[str]:
+        chapter_plan: list[str] = []
+        for book_code, book in self.books.items():
+            for chapter_number in sorted(map(int, book["chapters"])):
+                chapter_data = book["chapters"][str(chapter_number)]
+                chapter_plan.append(
+                    self.make_key(book_code, chapter_number, 1, max(map(int, chapter_data)))
+                )
+        return chapter_plan

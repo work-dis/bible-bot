@@ -54,7 +54,7 @@ def next_delivery_at(
     """Return the next local delivery time converted to UTC.
 
     ``force_tomorrow`` is used after onboarding and successful delivery so the
-    user never receives two scheduled verses on the same local date.
+    user never receives two scheduled chapters on the same local date.
     """
 
     zone = ZoneInfo(timezone_name)

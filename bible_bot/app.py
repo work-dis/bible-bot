@@ -46,13 +46,13 @@ async def main() -> None:
         anchor_date=anchor_date,
         poll_seconds=settings.scheduler_poll_seconds,
     )
-    scheduler_task = asyncio.create_task(scheduler.run(), name="daily-verse-scheduler")
+    scheduler_task = asyncio.create_task(scheduler.run(), name="daily-chapter-scheduler")
 
     await bot.set_my_commands(
         [
-            BotCommand(command="today", description="Получить сегодняшний стих"),
+            BotCommand(command="today", description="Получить сегодняшнюю главу"),
             BotCommand(command="settings", description="Настройки рассылки"),
-            BotCommand(command="favorites", description="Сохранённые стихи"),
+            BotCommand(command="favorites", description="Сохранённые главы"),
             BotCommand(command="pause", description="Приостановить рассылку"),
             BotCommand(command="help", description="Справка"),
         ]

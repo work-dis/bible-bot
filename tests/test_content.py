@@ -6,11 +6,13 @@ from bible_bot.content import BibleCatalog
 DATA_DIR = Path(__file__).resolve().parents[1] / "bible_bot" / "data"
 
 
-def test_plan_has_365_unique_entries_and_expected_finale() -> None:
+def test_plan_has_all_260_new_testament_chapters_in_order() -> None:
     catalog = BibleCatalog.from_data_dir(DATA_DIR)
-    assert len(catalog.main_plan) == 365
-    assert len(set(catalog.main_plan)) == 365
-    assert catalog.main_plan[-1] == "REV.22.21.21"
+    assert len(catalog.main_plan) == 260
+    assert len(set(catalog.main_plan)) == 260
+    assert catalog.main_plan[0] == "MAT.1.1.25"
+    assert catalog.main_plan[-1] == "REV.22.1.21"
+    assert all(catalog.get_passage(key).is_full_chapter for key in catalog.main_plan)
 
 
 def test_synodal_passage_rendering() -> None:
@@ -19,6 +21,13 @@ def test_synodal_passage_rendering() -> None:
     assert passage.reference == "1 Фессалоникийцам 5:16–18"
     assert "Всегда радуйтесь" in passage.text
     assert "Непрестанно молитесь" in passage.text
+
+
+def test_full_chapter_has_chapter_reference() -> None:
+    catalog = BibleCatalog.from_data_dir(DATA_DIR)
+    chapter = catalog.get_passage("1TH.5.1.28")
+    assert chapter.reference == "1 Фессалоникийцам 5"
+    assert chapter.is_full_chapter is True
 
 
 def test_global_plan_is_shared_by_calendar_date() -> None:
@@ -50,4 +59,4 @@ def test_all_theme_references_are_valid() -> None:
     for references in catalog.themes.values():
         assert references
         for reference in references:
-            catalog.get_passage(reference)
+            assert catalog.get_passage(reference).is_full_chapter is True

@@ -11,8 +11,8 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 
 from bible_bot.content import BibleCatalog, PlanSelection
 from bible_bot.database import Database, User
-from bible_bot.keyboards import completion_keyboard, daily_verse_keyboard
-from bible_bot.messages import completion_text, verse_text
+from bible_bot.keyboards import completion_keyboard, daily_chapter_keyboard
+from bible_bot.messages import chapter_messages, completion_text
 from bible_bot.time_utils import next_delivery_at
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class DailyScheduler:
         if not claimed:
             # A process may have stopped after Telegram accepted the message but
             # before the schedule was advanced. Prefer skipping a possible
-            # duplicate over sending the same daily verse twice.
+            # duplicate over sending the same daily chapter twice.
             logger.warning(
                 "Existing delivery claim for chat_id=%s local_date=%s; advancing schedule",
                 user.chat_id,
@@ -118,12 +118,23 @@ class DailyScheduler:
 
         passage = self.catalog.get_passage(selection.passage_key)
         saved = await self.database.is_favorite(user.chat_id, selection.passage_key)
+        parts = chapter_messages(
+            passage,
+            position=selection.position,
+            cycle_size=selection.size,
+        )
         try:
-            await self.bot.send_message(
-                user.chat_id,
-                verse_text(passage),
-                reply_markup=daily_verse_keyboard(selection.passage_key, saved=saved),
-            )
+            for index, text in enumerate(parts):
+                is_last = index == len(parts) - 1
+                await self.bot.send_message(
+                    user.chat_id,
+                    text,
+                    reply_markup=(
+                        daily_chapter_keyboard(selection.passage_key, saved=saved)
+                        if is_last
+                        else None
+                    ),
+                )
         except TelegramForbiddenError:
             logger.info("Bot was blocked by chat_id=%s; stopping delivery", user.chat_id)
             await self.database.release_delivery_claim(user.chat_id, local_date)
@@ -136,7 +147,7 @@ class DailyScheduler:
             )
             return
         except Exception:
-            logger.exception("Could not deliver daily verse to chat_id=%s", user.chat_id)
+            logger.exception("Could not deliver daily chapter to chat_id=%s", user.chat_id)
             await self.database.release_delivery_claim(user.chat_id, local_date)
             await self.database.defer_user(user.chat_id, datetime.now(UTC) + timedelta(minutes=10))
             return
@@ -150,7 +161,7 @@ class DailyScheduler:
                     reply_markup=completion_keyboard(favorite_count > 0),
                 )
             except Exception:
-                # The verse was already accepted by Telegram. Mark it complete
+                # The chapter was already accepted by Telegram. Mark it complete
                 # to avoid a duplicate; /settings can resume a paused user.
                 logger.exception("Could not send cycle completion to chat_id=%s", user.chat_id)
 

@@ -49,12 +49,12 @@ async def test_scheduler_sends_once_and_advances(database: Database) -> None:
     assert updated.next_send_at > due_at
 
 
-async def test_scheduler_pauses_after_final_passage(database: Database) -> None:
+async def test_scheduler_pauses_after_final_chapter(database: Database) -> None:
     catalog = BibleCatalog.from_data_dir(DATA_DIR)
     fake_bot = FakeBot()
     user = await database.ensure_user(321, "Мария", "Europe/Minsk", "09:00")
-    final_day = date(2027, 7, 15)
-    due_at = datetime(2027, 7, 15, 6, 0, tzinfo=UTC)
+    final_day = date(2027, 4, 1)
+    due_at = datetime(2027, 4, 1, 6, 0, tzinfo=UTC)
     await database.set_status(user.chat_id, "active", next_send_at=due_at)
 
     scheduler = DailyScheduler(

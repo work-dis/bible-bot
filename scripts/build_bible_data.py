@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Build the local New Testament corpus and the 365-entry reading plan.
+"""Build the local New Testament corpus and chapter-by-chapter reading plan.
 
-The generated files are committed so production does not depend on either
-source at runtime. Re-run this script only when intentionally refreshing data.
+The generated files are committed so production does not depend on the source
+at runtime. Re-run this script only when intentionally refreshing data.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -18,9 +17,6 @@ DATA_DIR = ROOT / "bible_bot" / "data"
 
 BIBLE_SOURCE = (
     "https://raw.githubusercontent.com/seven1m/open-bibles/master/rus-synodal.zefania.xml"
-)
-CURATED_SOURCE = (
-    "https://raw.githubusercontent.com/SuyangLiuPaul/YsWords/master/assets/daily_verses.json"
 )
 
 BOOKS = {
@@ -52,33 +48,6 @@ BOOKS = {
     65: ("JUD", "Jude", "Иуды"),
     66: ("REV", "Revelation", "Откровение"),
 }
-
-ENGLISH_TO_CODE = {english: code for code, english, _ in BOOKS.values()}
-REFERENCE_RE = re.compile(r"^(.+?) (\d+):(\d+)(?:-(\d+))?$")
-
-# Short passages that are clearer together than as isolated verses.
-FEATURED_RANGES = [
-    "MAT.11.28.30",
-    "MAT.22.37.39",
-    "MRK.12.29.31",
-    "LUK.11.9.10",
-    "JHN.3.16.17",
-    "JHN.10.10.11",
-    "JHN.14.1.3",
-    "JHN.15.12.13",
-    "ROM.8.31.32",
-    "ROM.8.38.39",
-    "ROM.12.1.2",
-    "1CO.13.4.7",
-    "2CO.4.16.18",
-    "GAL.5.22.23",
-    "EPH.2.8.10",
-    "EPH.4.31.32",
-    "PHP.4.6.7",
-    "COL.3.12.14",
-    "1TH.5.16.18",
-    "REV.21.3.4",
-]
 
 THEMES = {
     "faith": [
@@ -238,29 +207,9 @@ def build_bible(xml_bytes: bytes) -> dict:
     return result
 
 
-def parse_external_reference(reference: str) -> str | None:
-    match = REFERENCE_RE.match(reference)
-    if not match:
-        return None
-    book_name, chapter, start, end = match.groups()
-    code = ENGLISH_TO_CODE.get(book_name)
-    if code is None:
-        return None
-    return f"{code}.{int(chapter)}.{int(start)}.{int(end or start)}"
-
-
 def key_parts(key: str) -> tuple[str, int, int, int]:
     code, chapter, start, end = key.split(".")
     return code, int(chapter), int(start), int(end)
-
-
-def covered_by_featured(key: str) -> bool:
-    code, chapter, start, end = key_parts(key)
-    for featured in FEATURED_RANGES:
-        f_code, f_chapter, f_start, f_end = key_parts(featured)
-        if code == f_code and chapter == f_chapter and start >= f_start and end <= f_end:
-            return True
-    return False
 
 
 def validate_key(bible: dict, key: str) -> None:
@@ -273,47 +222,33 @@ def validate_key(bible: dict, key: str) -> None:
         raise ValueError(f"Reference is missing from the corpus: {key}") from exc
 
 
-def build_plan(bible: dict, curated_bytes: bytes) -> dict:
-    curated = json.loads(curated_bytes)
-    candidates = [
-        parsed
-        for reference in curated["verses"]
-        if (parsed := parse_external_reference(reference)) is not None
-    ]
-
-    final_key = "REV.22.21.21"
+def build_plan(bible: dict) -> dict:
     plan: list[str] = []
-    for key in [*FEATURED_RANGES, *candidates]:
-        if key == final_key or key in plan:
-            continue
-        if key not in FEATURED_RANGES and covered_by_featured(key):
-            continue
-        validate_key(bible, key)
-        plan.append(key)
-        if len(plan) == 364:
-            break
-    plan.append(final_key)
+    for code, book in bible["books"].items():
+        for chapter_number in sorted(map(int, book["chapters"])):
+            chapter = book["chapters"][str(chapter_number)]
+            plan.append(f"{code}.{chapter_number}.1.{max(map(int, chapter))}")
 
-    if len(plan) != 365 or len(set(plan)) != 365:
-        raise ValueError(f"Expected 365 unique plan entries, got {len(plan)}")
-
-    for entries in THEMES.values():
+    themed_chapters = {}
+    for slug, entries in THEMES.items():
+        chapter_keys = []
         for key in entries:
             validate_key(bible, key)
+            code, chapter_number, _, _ = key_parts(key)
+            chapter = bible["books"][code]["chapters"][str(chapter_number)]
+            chapter_key = f"{code}.{chapter_number}.1.{max(map(int, chapter))}"
+            if chapter_key not in chapter_keys:
+                chapter_keys.append(chapter_key)
+        themed_chapters[slug] = chapter_keys
 
     return {
         "_meta": {
             "count": len(plan),
-            "selection_source": CURATED_SOURCE,
-            "selection_license": "References only",
-            "notes": (
-                "The source list is supplemented with short hand-selected ranges. "
-                "Revelation 22:21 is reserved for the end of the cycle."
-            ),
+            "notes": "One complete New Testament chapter per day in canonical book order.",
         },
         "main": plan,
         "theme_labels": THEME_LABELS,
-        "themes": THEMES,
+        "themes": themed_chapters,
     }
 
 
@@ -324,7 +259,7 @@ def write_json(path: Path, data: dict) -> None:
 def main() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     bible = build_bible(fetch(BIBLE_SOURCE))
-    plan = build_plan(bible, fetch(CURATED_SOURCE))
+    plan = build_plan(bible)
     write_json(DATA_DIR / "new_testament.json", bible)
     write_json(DATA_DIR / "reading_plan.json", plan)
     verse_count = sum(
