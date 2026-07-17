@@ -13,6 +13,7 @@ from bible_bot.config import Settings
 from bible_bot.content import BibleCatalog, PlanSelection
 from bible_bot.database import Database, User
 from bible_bot.keyboards import (
+    channel_subscription_keyboard,
     completion_keyboard,
     confirmation_keyboard,
     daily_chapter_keyboard,
@@ -141,7 +142,10 @@ def create_router(
         await send_chapter(message, chat_id, selection)
 
     async def show_settings_message(message: Message, user: User) -> None:
-        await message.answer(settings_text(user), reply_markup=settings_keyboard(user.status))
+        await message.answer(
+            settings_text(user),
+            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+        )
 
     async def show_favorites_message(message: Message, chat_id: int) -> None:
         keys = await database.list_favorites(chat_id)
@@ -221,7 +225,8 @@ def create_router(
         else:
             user = await database.get_user(user.chat_id)
             await query.message.edit_text(
-                settings_text(user), reply_markup=settings_keyboard(user.status)
+                settings_text(user),
+                reply_markup=settings_keyboard(user.status, settings.public_channel_id),
             )
 
     @router.callback_query(F.data.startswith("time:custom:"))
@@ -264,7 +269,8 @@ def create_router(
         else:
             user = await database.get_user(user.chat_id)
             await query.message.edit_text(
-                settings_text(user), reply_markup=settings_keyboard(user.status)
+                settings_text(user),
+                reply_markup=settings_keyboard(user.status, settings.public_channel_id),
             )
 
     @router.callback_query(F.data.startswith("tz:custom:"))
@@ -287,7 +293,10 @@ def create_router(
     async def settings_callback(query: CallbackQuery) -> None:
         await query.answer()
         user = await require_callback_user(query)
-        await query.message.answer(settings_text(user), reply_markup=settings_keyboard(user.status))
+        await query.message.answer(
+            settings_text(user),
+            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+        )
 
     @router.callback_query(F.data == "settings:pause")
     async def pause_callback(query: CallbackQuery) -> None:
@@ -296,7 +305,8 @@ def create_router(
         await database.set_status(user.chat_id, "paused")
         user = await database.get_user(user.chat_id)
         await query.message.edit_text(
-            settings_text(user), reply_markup=settings_keyboard(user.status)
+            settings_text(user),
+            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
         )
 
     @router.message(Command("pause"))
@@ -314,7 +324,8 @@ def create_router(
         await database.set_status(user.chat_id, "active", next_send_at=next_at)
         user = await database.get_user(user.chat_id)
         await query.message.edit_text(
-            settings_text(user), reply_markup=settings_keyboard(user.status)
+            settings_text(user),
+            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
         )
 
     @router.callback_query(F.data == "settings:stop_confirm")
@@ -458,6 +469,17 @@ def create_router(
     async def help_command(message: Message) -> None:
         await message.answer(HELP_TEXT)
 
+    @router.message(Command("channel"))
+    async def channel_command(message: Message) -> None:
+        keyboard = channel_subscription_keyboard(settings.public_channel_id)
+        if keyboard is None:
+            await message.answer("Ссылка на публичный канал пока не настроена.")
+            return
+        await message.answer(
+            "📣 Подпишись на канал, чтобы читать размышления других участников.",
+            reply_markup=keyboard,
+        )
+
     @router.message(F.text | F.voice | F.audio | F.video | F.video_note)
     async def receive_pending_input(message: Message, bot: Bot) -> None:
         user = await ensure_message_user(message)
@@ -570,7 +592,11 @@ def create_router(
                     )
                     return
                 await database.clear_pending_input(user.chat_id)
-                await message.answer("✅ Размышления опубликованы в открытом Telegram-канале.")
+                await message.answer(
+                    "✅ Размышления опубликованы в открытом Telegram-канале.\n\n"
+                    "📣 Подпишись на канал, чтобы читать размышления других участников.",
+                    reply_markup=channel_subscription_keyboard(settings.public_channel_id),
+                )
                 return
             else:
                 await database.clear_pending_input(user.chat_id)

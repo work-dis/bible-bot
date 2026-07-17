@@ -52,6 +52,7 @@ async def main() -> None:
         [
             BotCommand(command="today", description="Получить сегодняшнюю главу"),
             BotCommand(command="settings", description="Настройки рассылки"),
+            BotCommand(command="channel", description="Открыть публичный канал"),
             BotCommand(command="favorites", description="Сохранённые главы"),
             BotCommand(command="pause", description="Приостановить рассылку"),
             BotCommand(command="help", description="Справка"),

@@ -76,17 +76,42 @@ def daily_chapter_keyboard(chapter_key: str, *, saved: bool = False) -> InlineKe
     )
 
 
-def settings_keyboard(status: str) -> InlineKeyboardMarkup:
+def channel_subscription_keyboard(channel_id: int | str | None) -> InlineKeyboardMarkup | None:
+    url = _channel_url(channel_id)
+    if url is None:
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📣 Подписаться на канал",
+                    url=url,
+                )
+            ]
+        ]
+    )
+
+
+def settings_keyboard(
+    status: str, channel_id: int | str | None = None
+) -> InlineKeyboardMarkup:
     state_button = (
         InlineKeyboardButton(text="⏸ Приостановить", callback_data="settings:pause")
         if status == "active"
         else InlineKeyboardButton(text="▶️ Возобновить", callback_data="settings:resume")
     )
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🕒 Изменить время", callback_data="time:menu:settings")],
-            [InlineKeyboardButton(text="🌍 Часовой пояс", callback_data="tz:menu:settings")],
-            [InlineKeyboardButton(text="🤍 Мои главы", callback_data="favorites:show")],
+    rows = [
+        [InlineKeyboardButton(text="🕒 Изменить время", callback_data="time:menu:settings")],
+        [InlineKeyboardButton(text="🌍 Часовой пояс", callback_data="tz:menu:settings")],
+        [InlineKeyboardButton(text="🤍 Мои главы", callback_data="favorites:show")],
+    ]
+    channel_url = _channel_url(channel_id)
+    if channel_url is not None:
+        rows.append(
+            [InlineKeyboardButton(text="📣 Подписаться на канал", url=channel_url)]
+        )
+    rows.extend(
+        [
             [state_button],
             [
                 InlineKeyboardButton(
@@ -95,6 +120,13 @@ def settings_keyboard(status: str) -> InlineKeyboardMarkup:
             ],
         ]
     )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _channel_url(channel_id: int | str | None) -> str | None:
+    if not isinstance(channel_id, str) or not channel_id.startswith("@"):
+        return None
+    return f"https://t.me/{channel_id.removeprefix('@')}"
 
 
 def stop_confirmation_keyboard() -> InlineKeyboardMarkup:

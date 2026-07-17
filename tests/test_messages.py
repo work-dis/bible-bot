@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from bible_bot.content import BibleCatalog
+from bible_bot.keyboards import channel_subscription_keyboard, settings_keyboard
 from bible_bot.messages import (
     TELEGRAM_TEXT_LIMIT,
     chapter_messages,
@@ -95,3 +96,22 @@ def test_public_reflection_and_long_text_are_telegram_safe() -> None:
     assert "Выбранные стихи:" in parts[0]
     assert "Ибо так возлюбил Бог мир" in parts[0]
     assert all(len(part) <= TELEGRAM_TEXT_LIMIT for part in parts)
+
+
+def test_public_channel_subscription_keyboard_uses_channel_username() -> None:
+    keyboard = channel_subscription_keyboard("@bible_readers")
+
+    assert keyboard is not None
+    assert keyboard.inline_keyboard[0][0].text == "📣 Подписаться на канал"
+    assert keyboard.inline_keyboard[0][0].url == "https://t.me/bible_readers"
+    assert channel_subscription_keyboard(-1001234567890) is None
+
+    settings = settings_keyboard("active", "@bible_readers")
+    channel_buttons = [
+        button
+        for row in settings.inline_keyboard
+        for button in row
+        if button.text == "📣 Подписаться на канал"
+    ]
+    assert len(channel_buttons) == 1
+    assert channel_buttons[0].url == "https://t.me/bible_readers"
