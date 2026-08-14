@@ -26,6 +26,17 @@ class PendingInput:
     origin: str
 
 
+@dataclass(frozen=True, slots=True)
+class Feedback:
+    id: int
+    chat_id: int
+    author_name: str
+    body: str
+    content_type: str
+    created_at: datetime
+    reviewed_at: datetime | None
+
+
 class SQLiteDatabase:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -95,8 +106,21 @@ class SQLiteDatabase:
                 expires_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id INTEGER NOT NULL REFERENCES users(chat_id) ON DELETE CASCADE,
+                author_name TEXT NOT NULL,
+                body TEXT NOT NULL DEFAULT '',
+                content_type TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                reviewed_at TEXT
+            );
+
             CREATE INDEX IF NOT EXISTS users_due_idx
                 ON users(status, next_send_at);
+
+            CREATE INDEX IF NOT EXISTS feedback_created_idx
+                ON feedback(created_at DESC);
             """
         )
         await self._connection.commit()
@@ -381,6 +405,61 @@ class SQLiteDatabase:
             )
             await self.connection.commit()
 
+    async def create_feedback(
+        self,
+        chat_id: int,
+        author_name: str,
+        body: str,
+        content_type: str,
+    ) -> Feedback:
+        created_at = datetime.now(UTC)
+        async with self._lock:
+            cursor = await self.connection.execute(
+                """
+                INSERT INTO feedback (
+                    chat_id, author_name, body, content_type, created_at
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (chat_id, author_name, body, content_type, created_at.isoformat()),
+            )
+            await self.connection.commit()
+            feedback_id = cursor.lastrowid
+        if feedback_id is None:
+            raise RuntimeError("Could not create feedback")
+        return Feedback(
+            id=feedback_id,
+            chat_id=chat_id,
+            author_name=author_name,
+            body=body,
+            content_type=content_type,
+            created_at=created_at,
+            reviewed_at=None,
+        )
+
+    async def list_feedback(self, *, limit: int = 10) -> list[Feedback]:
+        cursor = await self.connection.execute(
+            """
+            SELECT * FROM feedback
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        return [self._row_to_feedback(row) for row in await cursor.fetchall()]
+
+    async def mark_feedback_reviewed(self, feedback_id: int) -> bool:
+        async with self._lock:
+            cursor = await self.connection.execute(
+                """
+                UPDATE feedback
+                SET reviewed_at = COALESCE(reviewed_at, ?)
+                WHERE id = ?
+                """,
+                (datetime.now(UTC).isoformat(), feedback_id),
+            )
+            await self.connection.commit()
+            return cursor.rowcount == 1
+
     async def claim_telegram_update(self, update_id: int) -> bool:
         async with self._lock:
             cursor = await self.connection.execute(
@@ -451,6 +530,22 @@ class SQLiteDatabase:
             mode=row["mode"],
             mode_position=row["mode_position"],
             next_send_at=next_send_at,
+        )
+
+    @staticmethod
+    def _row_to_feedback(row: aiosqlite.Row) -> Feedback:
+        return Feedback(
+            id=row["id"],
+            chat_id=row["chat_id"],
+            author_name=row["author_name"],
+            body=row["body"],
+            content_type=row["content_type"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            reviewed_at=(
+                datetime.fromisoformat(row["reviewed_at"])
+                if row["reviewed_at"]
+                else None
+            ),
         )
 
 

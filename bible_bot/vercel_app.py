@@ -113,6 +113,7 @@ async def health() -> dict[str, str | bool]:
         "database_configured": bool(os.getenv("DATABASE_URL", "").strip()),
         "webhook_configured": bool(os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()),
         "delivery_configured": bool(os.getenv("CRON_SECRET", "").strip()),
+        "admin_configured": bool(os.getenv("ADMIN_CHAT_ID", "").strip()),
     }
 
 

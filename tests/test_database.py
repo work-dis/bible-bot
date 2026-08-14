@@ -78,6 +78,19 @@ async def test_pending_verse_selection_can_advance_to_reflection(database: Datab
     assert pending.origin == "JHN.3|3,16"
 
 
+async def test_feedback_is_saved_listed_and_marked_reviewed(database: Database) -> None:
+    await database.ensure_user(10, "Анна", "Europe/Minsk", "09:00")
+
+    created = await database.create_feedback(10, "Анна", "Спасибо за бота", "текст")
+    items = await database.list_feedback()
+
+    assert created.id > 0
+    assert [item.body for item in items] == ["Спасибо за бота"]
+    assert items[0].reviewed_at is None
+    assert await database.mark_feedback_reviewed(created.id) is True
+    assert (await database.list_feedback())[0].reviewed_at is not None
+
+
 async def test_telegram_update_is_claimed_once(database: Database) -> None:
     assert await database.claim_telegram_update(12345) is True
     assert await database.claim_telegram_update(12345) is False

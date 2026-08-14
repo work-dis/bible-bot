@@ -17,7 +17,9 @@ from bible_bot.keyboards import (
     completion_keyboard,
     confirmation_keyboard,
     daily_chapter_keyboard,
-    feedback_keyboard,
+    feedback_cancel_keyboard,
+    feedback_list_keyboard,
+    feedback_review_keyboard,
     settings_keyboard,
     stop_confirmation_keyboard,
     themes_keyboard,
@@ -32,6 +34,8 @@ from bible_bot.messages import (
     chapter_messages,
     completion_text,
     favorites_text,
+    feedback_list_text,
+    feedback_notification_text,
     parse_verse_selection,
     public_reflection_text,
     reflection_prompt_text,
@@ -110,6 +114,13 @@ def create_router(
             force_tomorrow=False,
         )
 
+    def settings_markup(user: User):
+        return settings_keyboard(
+            user.status,
+            settings.public_channel_id,
+            is_admin=user.chat_id == settings.admin_chat_id,
+        )
+
     async def send_chapter(
         message: Message,
         chat_id: int,
@@ -146,9 +157,7 @@ def create_router(
     async def show_settings_message(message: Message, user: User) -> None:
         await message.answer(
             settings_text(user),
-            reply_markup=settings_keyboard(
-                user.status, settings.public_channel_id, settings.feedback_url
-            ),
+            reply_markup=settings_markup(user),
         )
 
     async def show_favorites_message(message: Message, chat_id: int) -> None:
@@ -230,9 +239,7 @@ def create_router(
             user = await database.get_user(user.chat_id)
             await query.message.edit_text(
                 settings_text(user),
-                reply_markup=settings_keyboard(
-                    user.status, settings.public_channel_id, settings.feedback_url
-                ),
+                reply_markup=settings_markup(user),
             )
 
     @router.callback_query(F.data.startswith("time:custom:"))
@@ -276,9 +283,7 @@ def create_router(
             user = await database.get_user(user.chat_id)
             await query.message.edit_text(
                 settings_text(user),
-                reply_markup=settings_keyboard(
-                    user.status, settings.public_channel_id, settings.feedback_url
-                ),
+                reply_markup=settings_markup(user),
             )
 
     @router.callback_query(F.data.startswith("tz:custom:"))
@@ -303,9 +308,7 @@ def create_router(
         user = await require_callback_user(query)
         await query.message.answer(
             settings_text(user),
-            reply_markup=settings_keyboard(
-                user.status, settings.public_channel_id, settings.feedback_url
-            ),
+            reply_markup=settings_markup(user),
         )
 
     @router.callback_query(F.data == "settings:pause")
@@ -316,9 +319,7 @@ def create_router(
         user = await database.get_user(user.chat_id)
         await query.message.edit_text(
             settings_text(user),
-            reply_markup=settings_keyboard(
-                user.status, settings.public_channel_id, settings.feedback_url
-            ),
+            reply_markup=settings_markup(user),
         )
 
     @router.message(Command("pause"))
@@ -337,9 +338,7 @@ def create_router(
         user = await database.get_user(user.chat_id)
         await query.message.edit_text(
             settings_text(user),
-            reply_markup=settings_keyboard(
-                user.status, settings.public_channel_id, settings.feedback_url
-            ),
+            reply_markup=settings_markup(user),
         )
 
     @router.callback_query(F.data == "settings:stop_confirm")
@@ -494,16 +493,72 @@ def create_router(
             reply_markup=keyboard,
         )
 
+    async def request_feedback(message: Message, chat_id: int) -> None:
+        if settings.admin_chat_id is None:
+            await message.answer("Обратная связь пока не настроена.")
+            return
+        await database.set_pending_input(chat_id, "feedback", "menu")
+        await message.answer(
+            "💬 <b>Обратная связь</b>\n\n"
+            "Отправь отзыв, вопрос или предложение одним сообщением. "
+            "Можно использовать текст, аудио или видео.",
+            reply_markup=feedback_cancel_keyboard(),
+        )
+
     @router.message(Command("feedback"))
     async def feedback_command(message: Message) -> None:
-        keyboard = feedback_keyboard(settings.feedback_url)
-        if keyboard is None:
-            await message.answer("Ссылка для обратной связи пока не настроена.")
-            return
+        user = await ensure_message_user(message)
+        await request_feedback(message, user.chat_id)
+
+    @router.callback_query(F.data == "feedback:start")
+    async def feedback_callback(query: CallbackQuery) -> None:
+        await query.answer()
+        user = await require_callback_user(query)
+        await request_feedback(query.message, user.chat_id)
+
+    @router.callback_query(F.data == "feedback:cancel")
+    async def feedback_cancel(query: CallbackQuery) -> None:
+        user = await require_callback_user(query)
+        await database.clear_pending_input(user.chat_id)
+        await query.answer("Отправка отзыва отменена")
+        await query.message.edit_text("Отправка отзыва отменена.")
+
+    async def show_feedback_list(message: Message) -> None:
+        items = await database.list_feedback(limit=10)
         await message.answer(
-            "💬 Есть предложение, вопрос или отзыв о боте? Напиши нам.",
-            reply_markup=keyboard,
+            feedback_list_text(items),
+            reply_markup=feedback_list_keyboard(),
         )
+
+    @router.message(Command("reviews"))
+    async def reviews_command(message: Message) -> None:
+        if message.chat.id != settings.admin_chat_id:
+            await message.answer("Эта команда доступна только администратору.")
+            return
+        await show_feedback_list(message)
+
+    @router.callback_query(F.data == "admin:feedback")
+    async def admin_feedback_callback(query: CallbackQuery) -> None:
+        if query.message is None or query.message.chat.id != settings.admin_chat_id:
+            await query.answer("Недостаточно прав", show_alert=True)
+            return
+        await query.answer()
+        items = await database.list_feedback(limit=10)
+        await query.message.edit_text(
+            feedback_list_text(items),
+            reply_markup=feedback_list_keyboard(),
+        )
+
+    @router.callback_query(F.data.startswith("feedback:review:"))
+    async def mark_feedback_reviewed(query: CallbackQuery) -> None:
+        if query.message is None or query.message.chat.id != settings.admin_chat_id:
+            await query.answer("Недостаточно прав", show_alert=True)
+            return
+        feedback_id = int(query.data.rsplit(":", 1)[1])
+        updated = await database.mark_feedback_reviewed(feedback_id)
+        await query.answer("Отзыв обработан" if updated else "Отзыв не найден")
+        if updated:
+            await query.message.edit_reply_markup(reply_markup=None)
 
     @router.message(F.text | F.voice | F.audio | F.video | F.video_note)
     async def receive_pending_input(message: Message, bot: Bot) -> None:
@@ -560,6 +615,53 @@ def create_router(
                     _reflection_origin(chapter.key, verse_numbers),
                 )
                 await message.answer(selected_verses_text(chapter, verse_numbers))
+                return
+            elif pending.action == "feedback":
+                raw_author = message.from_user.full_name if message.from_user else user.first_name
+                author = " ".join(raw_author.split()) or "Пользователь"
+                body = message.text or message.caption or ""
+                if message.text is not None:
+                    content_type = "текст"
+                elif message.voice is not None:
+                    content_type = "голосовое сообщение"
+                elif message.audio is not None:
+                    content_type = "аудио"
+                elif message.video is not None:
+                    content_type = "видео"
+                else:
+                    content_type = "видеосообщение"
+                feedback = await database.create_feedback(
+                    user.chat_id,
+                    author,
+                    body,
+                    content_type,
+                )
+                await database.clear_pending_input(user.chat_id)
+                if settings.admin_chat_id is not None:
+                    author_url = telegram_user_url(
+                        message.from_user.id if message.from_user else user.chat_id,
+                        message.from_user.username if message.from_user else None,
+                    )
+                    try:
+                        await bot.send_message(
+                            settings.admin_chat_id,
+                            feedback_notification_text(feedback, author_url),
+                            reply_markup=feedback_review_keyboard(feedback.id),
+                        )
+                        await bot.copy_message(
+                            chat_id=settings.admin_chat_id,
+                            from_chat_id=message.chat.id,
+                            message_id=message.message_id,
+                        )
+                    except TelegramAPIError:
+                        logger.exception(
+                            "Could not notify admin=%s about feedback=%s",
+                            settings.admin_chat_id,
+                            feedback.id,
+                        )
+                await message.answer(
+                    "✅ Спасибо! Отзыв отправлен администратору."
+                )
                 return
             elif pending.action == "reflection":
                 if settings.public_channel_id is None:

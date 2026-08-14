@@ -16,6 +16,7 @@ COMMANDS = [
     {"command": "pause", "description": "Приостановить рассылку"},
     {"command": "help", "description": "Справка"},
 ]
+ADMIN_COMMANDS = [*COMMANDS, {"command": "reviews", "description": "Отзывы пользователей"}]
 
 
 def telegram_call(token: str, method: str, payload: dict) -> dict:
@@ -48,6 +49,7 @@ def main() -> None:
 
     token = os.getenv("BOT_TOKEN", "").strip()
     secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
+    admin_chat_id = os.getenv("ADMIN_CHAT_ID", "").strip()
     app_url = args.url.strip().rstrip("/")
     if not token or not secret or not app_url:
         raise SystemExit("BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET and APP_URL/--url are required")
@@ -67,6 +69,17 @@ def main() -> None:
         },
     )
     telegram_call(token, "setMyCommands", {"commands": COMMANDS})
+    if admin_chat_id:
+        if not admin_chat_id.lstrip("-").isdigit():
+            raise SystemExit("ADMIN_CHAT_ID must be a numeric Telegram chat id")
+        telegram_call(
+            token,
+            "setMyCommands",
+            {
+                "commands": ADMIN_COMMANDS,
+                "scope": {"type": "chat", "chat_id": int(admin_chat_id)},
+            },
+        )
     print(f"Telegram webhook configured: {webhook_url}")
 
 

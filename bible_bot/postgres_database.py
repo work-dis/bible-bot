@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime
 import psycopg
 from psycopg.rows import dict_row
 
-from bible_bot.database import PendingInput, User
+from bible_bot.database import Feedback, PendingInput, User
 
 SCHEMA_STATEMENTS = (
     """
@@ -72,6 +72,20 @@ SCHEMA_STATEMENTS = (
     """,
     """
     CREATE INDEX IF NOT EXISTS users_due_idx ON users(status, next_send_at)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS feedback (
+        id BIGSERIAL PRIMARY KEY,
+        chat_id BIGINT NOT NULL REFERENCES users(chat_id) ON DELETE CASCADE,
+        author_name TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        content_type TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        reviewed_at TIMESTAMPTZ
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS feedback_created_idx ON feedback(created_at DESC)
     """,
 )
 
@@ -358,6 +372,56 @@ class PostgresDatabase:
         async with await self._connect() as connection:
             await connection.execute("DELETE FROM user_input_state WHERE chat_id = %s", (chat_id,))
 
+    async def create_feedback(
+        self,
+        chat_id: int,
+        author_name: str,
+        body: str,
+        content_type: str,
+    ) -> Feedback:
+        created_at = datetime.now(UTC)
+        async with await self._connect() as connection:
+            cursor = await connection.execute(
+                """
+                INSERT INTO feedback (
+                    chat_id, author_name, body, content_type, created_at
+                ) VALUES (%s, %s, %s, %s, %s)
+                RETURNING *
+                """,
+                (chat_id, author_name, body, content_type, created_at),
+            )
+            row = await cursor.fetchone()
+        if row is None:
+            raise RuntimeError("Could not create feedback")
+        return self._row_to_feedback(row)
+
+    async def list_feedback(self, *, limit: int = 10) -> list[Feedback]:
+        async with await self._connect() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT * FROM feedback
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = await cursor.fetchall()
+        return [self._row_to_feedback(row) for row in rows]
+
+    async def mark_feedback_reviewed(self, feedback_id: int) -> bool:
+        async with await self._connect() as connection:
+            cursor = await connection.execute(
+                """
+                UPDATE feedback
+                SET reviewed_at = COALESCE(reviewed_at, %s)
+                WHERE id = %s
+                RETURNING id
+                """,
+                (datetime.now(UTC), feedback_id),
+            )
+            row = await cursor.fetchone()
+        return row is not None
+
     async def claim_telegram_update(self, update_id: int) -> bool:
         async with await self._connect() as connection:
             cursor = await connection.execute(
@@ -439,4 +503,22 @@ class PostgresDatabase:
             mode=row["mode"],
             mode_position=row["mode_position"],
             next_send_at=next_send_at,
+        )
+
+    @staticmethod
+    def _row_to_feedback(row: dict) -> Feedback:
+        created_at = row["created_at"]
+        reviewed_at = row["reviewed_at"]
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=UTC)
+        if reviewed_at is not None and reviewed_at.tzinfo is None:
+            reviewed_at = reviewed_at.replace(tzinfo=UTC)
+        return Feedback(
+            id=row["id"],
+            chat_id=row["chat_id"],
+            author_name=row["author_name"],
+            body=row["body"],
+            content_type=row["content_type"],
+            created_at=created_at,
+            reviewed_at=reviewed_at,
         )

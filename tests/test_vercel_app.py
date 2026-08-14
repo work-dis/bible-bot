@@ -4,7 +4,7 @@ from bible_bot.vercel_app import _same_secret, app
 
 
 def test_health_does_not_require_runtime_secrets(monkeypatch) -> None:
-    for name in ("DATABASE_URL", "TELEGRAM_WEBHOOK_SECRET", "CRON_SECRET"):
+    for name in ("DATABASE_URL", "TELEGRAM_WEBHOOK_SECRET", "CRON_SECRET", "ADMIN_CHAT_ID"):
         monkeypatch.delenv(name, raising=False)
 
     response = TestClient(app).get("/api/health")
@@ -16,6 +16,7 @@ def test_health_does_not_require_runtime_secrets(monkeypatch) -> None:
         "database_configured": False,
         "webhook_configured": False,
         "delivery_configured": False,
+        "admin_configured": False,
     }
 
 

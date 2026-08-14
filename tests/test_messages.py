@@ -1,16 +1,22 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from bible_bot.content import BibleCatalog
+from bible_bot.database import Feedback
 from bible_bot.keyboards import (
     channel_subscription_keyboard,
-    feedback_keyboard,
+    feedback_cancel_keyboard,
+    feedback_list_keyboard,
+    feedback_review_keyboard,
     settings_keyboard,
 )
 from bible_bot.messages import (
     TELEGRAM_TEXT_LIMIT,
     chapter_messages,
+    feedback_list_text,
+    feedback_notification_text,
     format_verse_numbers,
     parse_verse_selection,
     public_reflection_text,
@@ -133,7 +139,7 @@ def test_settings_keyboard_contains_feedback_button() -> None:
     settings = settings_keyboard(
         "active",
         "@bible_readers",
-        "https://t.me/bible_feedback",
+        is_admin=True,
     )
 
     feedback_button = next(
@@ -142,16 +148,42 @@ def test_settings_keyboard_contains_feedback_button() -> None:
         for button in row
         if button.text == "💬 Оставить отзыв"
     )
-    assert feedback_button.url == "https://t.me/bible_feedback"
+    assert feedback_button.callback_data == "feedback:start"
+    assert any(
+        button.text == "📥 Отзывы"
+        for row in settings.inline_keyboard
+        for button in row
+    )
 
 
-def test_feedback_keyboard_uses_configured_url() -> None:
-    keyboard = feedback_keyboard("https://t.me/bible_feedback")
+def test_feedback_workflow_keyboards_use_callbacks() -> None:
+    cancel = feedback_cancel_keyboard()
+    review = feedback_review_keyboard(42)
+    listing = feedback_list_keyboard()
 
-    assert keyboard is not None
-    assert keyboard.inline_keyboard[0][0].text == "💬 Оставить отзыв"
-    assert keyboard.inline_keyboard[0][0].url == "https://t.me/bible_feedback"
-    assert feedback_keyboard(None) is None
+    assert cancel.inline_keyboard[0][0].callback_data == "feedback:cancel"
+    assert review.inline_keyboard[0][0].callback_data == "feedback:review:42"
+    assert listing.inline_keyboard[0][0].callback_data == "admin:feedback"
+
+
+def test_feedback_admin_messages_are_safe_and_show_status() -> None:
+    item = Feedback(
+        id=42,
+        chat_id=12345,
+        author_name="Анна & друзья",
+        body="Хороший <бот>",
+        content_type="текст",
+        created_at=datetime(2026, 8, 14, 10, 30, tzinfo=UTC),
+        reviewed_at=None,
+    )
+
+    notification = feedback_notification_text(item, telegram_user_url(item.chat_id))
+    listing = feedback_list_text([item])
+
+    assert "Новый отзыв #42" in notification
+    assert "Анна &amp; друзья" in notification
+    assert "🆕 <b>#42</b>" in listing
+    assert "Хороший &lt;бот&gt;" in listing
 
 
 def test_telegram_user_url_prefers_public_username() -> None:

@@ -71,7 +71,7 @@ DEFAULT_TIME=09:00
 DEFAULT_TIMEZONE=Europe/Minsk
 LOG_LEVEL=INFO
 PUBLIC_CHANNEL_ID=@public_channel_username
-FEEDBACK_URL=https://t.me/feedback_username
+ADMIN_CHAT_ID=123456789
 ```
 
 Для публичных размышлений создайте открытый Telegram-канал, добавьте бота
@@ -83,11 +83,16 @@ FEEDBACK_URL=https://t.me/feedback_username
 подписаться на канал и показывает кнопку со ссылкой. Для автоматического
 формирования ссылки задавайте `PUBLIC_CHANNEL_ID` через публичный `@username`.
 
-Чтобы в настройках появилась кнопка «Оставить отзыв», задайте `FEEDBACK_URL`.
-Можно указать полную ссылку (`https://t.me/feedback_username`, `tg://...`) или
-короткое значение `@feedback_username`. В публикации размышления имя автора
-становится ссылкой на его Telegram-профиль; ссылка работает и в привязанной к
-каналу группе комментариев, в том числе если у автора нет публичного username.
+Для встроенной обратной связи задайте `ADMIN_CHAT_ID` — числовой Telegram ID
+администратора. Пользователь отправляет текст, аудио или видео через `/feedback`;
+отзыв сохраняется в базе, а администратор сразу получает уведомление и копию
+сообщения. В его настройках появляется кнопка «Отзывы», а в персональном меню —
+команда `/reviews`. Перед настройкой администратор должен хотя бы один раз открыть
+бота и отправить `/start`.
+
+В публикации размышления имя автора становится ссылкой на его Telegram-профиль;
+ссылка работает и в привязанной к каналу группе комментариев, в том числе если
+у автора нет публичного username.
 
 Сгенерируйте два разных секрета:
 
@@ -95,8 +100,9 @@ FEEDBACK_URL=https://t.me/feedback_username
 python -c 'import secrets; print(secrets.token_urlsafe(32))'
 ```
 
-После деплоя откройте `https://<project>.vercel.app/api/health`. Все три поля
-`*_configured` должны быть `true`.
+После деплоя откройте `https://<project>.vercel.app/api/health`. Поля
+`database_configured`, `webhook_configured`, `delivery_configured` и
+`admin_configured` должны быть `true`.
 
 ### 3. Telegram webhook
 
@@ -156,6 +162,9 @@ python -m bible_bot
 - `/favorites` — сохранённые главы;
 - `/pause` — пауза;
 - `/help` — справка.
+
+Администратору, чей ID указан в `ADMIN_CHAT_ID`, дополнительно доступна команда
+`/reviews` и кнопка «Отзывы» в настройках.
 
 ## Надёжность доставки
 

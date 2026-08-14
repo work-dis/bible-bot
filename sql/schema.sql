@@ -53,4 +53,15 @@ CREATE TABLE IF NOT EXISTS scheduler_locks (
     expires_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS feedback (
+    id BIGSERIAL PRIMARY KEY,
+    chat_id BIGINT NOT NULL REFERENCES users(chat_id) ON DELETE CASCADE,
+    author_name TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    content_type TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    reviewed_at TIMESTAMPTZ
+);
+
 CREATE INDEX IF NOT EXISTS users_due_idx ON users(status, next_send_at);
+CREATE INDEX IF NOT EXISTS feedback_created_idx ON feedback(created_at DESC);

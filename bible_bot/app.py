@@ -10,7 +10,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, BotCommandScopeChat
 
 from bible_bot.config import Settings
 from bible_bot.content import BibleCatalog
@@ -48,17 +48,21 @@ async def main() -> None:
     )
     scheduler_task = asyncio.create_task(scheduler.run(), name="daily-chapter-scheduler")
 
-    await bot.set_my_commands(
-        [
-            BotCommand(command="today", description="Получить сегодняшнюю главу"),
-            BotCommand(command="settings", description="Настройки рассылки"),
-            BotCommand(command="channel", description="Открыть публичный канал"),
-            BotCommand(command="feedback", description="Оставить отзыв"),
-            BotCommand(command="favorites", description="Сохранённые главы"),
-            BotCommand(command="pause", description="Приостановить рассылку"),
-            BotCommand(command="help", description="Справка"),
-        ]
-    )
+    commands = [
+        BotCommand(command="today", description="Получить сегодняшнюю главу"),
+        BotCommand(command="settings", description="Настройки рассылки"),
+        BotCommand(command="channel", description="Открыть публичный канал"),
+        BotCommand(command="feedback", description="Оставить отзыв"),
+        BotCommand(command="favorites", description="Сохранённые главы"),
+        BotCommand(command="pause", description="Приостановить рассылку"),
+        BotCommand(command="help", description="Справка"),
+    ]
+    await bot.set_my_commands(commands)
+    if settings.admin_chat_id is not None:
+        await bot.set_my_commands(
+            [*commands, BotCommand(command="reviews", description="Отзывы пользователей")],
+            scope=BotCommandScopeChat(chat_id=settings.admin_chat_id),
+        )
 
     try:
         await dispatcher.start_polling(bot, allowed_updates=dispatcher.resolve_used_update_types())

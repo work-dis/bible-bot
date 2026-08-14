@@ -4,7 +4,7 @@ import re
 from html import escape
 
 from bible_bot.content import Chapter
-from bible_bot.database import User
+from bible_bot.database import Feedback, User
 
 STATUS_LABELS = {
     "onboarding": "не настроена",
@@ -275,6 +275,35 @@ def telegram_user_url(user_id: int, username: str | None = None) -> str:
     if username:
         return f"https://t.me/{username.removeprefix('@')}"
     return f"tg://user?id={user_id}"
+
+
+def feedback_notification_text(feedback: Feedback, author_url: str) -> str:
+    return (
+        f"📥 <b>Новый отзыв #{feedback.id}</b>\n\n"
+        f'👤 <a href="{escape(author_url, quote=True)}">'
+        f"{escape(feedback.author_name)}</a>\n"
+        f"🆔 <code>{feedback.chat_id}</code>\n"
+        f"Тип: {escape(feedback.content_type)}\n"
+        f"Получен: {feedback.created_at:%d.%m.%Y %H:%M} UTC"
+    )
+
+
+def feedback_list_text(items: list[Feedback]) -> str:
+    if not items:
+        return "📥 <b>Отзывы</b>\n\nОтзывов пока нет."
+
+    lines = ["📥 <b>Последние отзывы</b>", ""]
+    for item in items:
+        status = "✅" if item.reviewed_at else "🆕"
+        preview = " ".join(item.body.split()) or f"[{item.content_type}]"
+        if len(preview) > 120:
+            preview = f"{preview[:117]}…"
+        lines.append(
+            f"{status} <b>#{item.id}</b> · {escape(item.author_name)} · "
+            f"{item.created_at:%d.%m %H:%M}\n{escape(preview)}"
+        )
+    lines.extend(["", "🆕 — новый · ✅ — обработан"])
+    return "\n\n".join(lines)
 
 
 def split_telegram_text(text: str, max_length: int = TELEGRAM_TEXT_LIMIT) -> tuple[str, ...]:

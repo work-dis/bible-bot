@@ -92,12 +92,31 @@ def channel_subscription_keyboard(channel_id: int | str | None) -> InlineKeyboar
     )
 
 
-def feedback_keyboard(feedback_url: str | None) -> InlineKeyboardMarkup | None:
-    if feedback_url is None:
-        return None
+def feedback_cancel_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💬 Оставить отзыв", url=feedback_url)]
+            [InlineKeyboardButton(text="Отмена", callback_data="feedback:cancel")]
+        ]
+    )
+
+
+def feedback_review_keyboard(feedback_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Отметить обработанным",
+                    callback_data=f"feedback:review:{feedback_id}",
+                )
+            ]
+        ]
+    )
+
+
+def feedback_list_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Обновить", callback_data="admin:feedback")]
         ]
     )
 
@@ -105,7 +124,8 @@ def feedback_keyboard(feedback_url: str | None) -> InlineKeyboardMarkup | None:
 def settings_keyboard(
     status: str,
     channel_id: int | str | None = None,
-    feedback_url: str | None = None,
+    *,
+    is_admin: bool = False,
 ) -> InlineKeyboardMarkup:
     state_button = (
         InlineKeyboardButton(text="⏸ Приостановить", callback_data="settings:pause")
@@ -122,8 +142,13 @@ def settings_keyboard(
         rows.append(
             [InlineKeyboardButton(text="📣 Подписаться на канал", url=channel_url)]
         )
-    if feedback_url is not None:
-        rows.append([InlineKeyboardButton(text="💬 Оставить отзыв", url=feedback_url)])
+    rows.append(
+        [InlineKeyboardButton(text="💬 Оставить отзыв", callback_data="feedback:start")]
+    )
+    if is_admin:
+        rows.append(
+            [InlineKeyboardButton(text="📥 Отзывы", callback_data="admin:feedback")]
+        )
     rows.extend(
         [
             [state_button],
