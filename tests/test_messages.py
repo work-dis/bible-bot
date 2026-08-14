@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from bible_bot.content import BibleCatalog
-from bible_bot.keyboards import channel_subscription_keyboard, settings_keyboard
+from bible_bot.keyboards import (
+    channel_subscription_keyboard,
+    feedback_keyboard,
+    settings_keyboard,
+)
 from bible_bot.messages import (
     TELEGRAM_TEXT_LIMIT,
     chapter_messages,
@@ -139,6 +143,15 @@ def test_settings_keyboard_contains_feedback_button() -> None:
         if button.text == "💬 Оставить отзыв"
     )
     assert feedback_button.url == "https://t.me/bible_feedback"
+
+
+def test_feedback_keyboard_uses_configured_url() -> None:
+    keyboard = feedback_keyboard("https://t.me/bible_feedback")
+
+    assert keyboard is not None
+    assert keyboard.inline_keyboard[0][0].text == "💬 Оставить отзыв"
+    assert keyboard.inline_keyboard[0][0].url == "https://t.me/bible_feedback"
+    assert feedback_keyboard(None) is None
 
 
 def test_telegram_user_url_prefers_public_username() -> None:

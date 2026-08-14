@@ -11,6 +11,7 @@ COMMANDS = [
     {"command": "today", "description": "Получить сегодняшнюю главу"},
     {"command": "settings", "description": "Настройки рассылки"},
     {"command": "channel", "description": "Открыть публичный канал"},
+    {"command": "feedback", "description": "Оставить отзыв"},
     {"command": "favorites", "description": "Сохранённые главы"},
     {"command": "pause", "description": "Приостановить рассылку"},
     {"command": "help", "description": "Справка"},

@@ -17,6 +17,7 @@ from bible_bot.keyboards import (
     completion_keyboard,
     confirmation_keyboard,
     daily_chapter_keyboard,
+    feedback_keyboard,
     settings_keyboard,
     stop_confirmation_keyboard,
     themes_keyboard,
@@ -490,6 +491,17 @@ def create_router(
             return
         await message.answer(
             "📣 Подпишись на канал, чтобы читать размышления других участников.",
+            reply_markup=keyboard,
+        )
+
+    @router.message(Command("feedback"))
+    async def feedback_command(message: Message) -> None:
+        keyboard = feedback_keyboard(settings.feedback_url)
+        if keyboard is None:
+            await message.answer("Ссылка для обратной связи пока не настроена.")
+            return
+        await message.answer(
+            "💬 Есть предложение, вопрос или отзыв о боте? Напиши нам.",
             reply_markup=keyboard,
         )
 

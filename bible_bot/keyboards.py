@@ -92,6 +92,16 @@ def channel_subscription_keyboard(channel_id: int | str | None) -> InlineKeyboar
     )
 
 
+def feedback_keyboard(feedback_url: str | None) -> InlineKeyboardMarkup | None:
+    if feedback_url is None:
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💬 Оставить отзыв", url=feedback_url)]
+        ]
+    )
+
+
 def settings_keyboard(
     status: str,
     channel_id: int | str | None = None,
