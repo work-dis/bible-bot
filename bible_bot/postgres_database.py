@@ -87,6 +87,15 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS feedback_created_idx ON feedback(created_at DESC)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS broadcast_deliveries (
+        campaign TEXT NOT NULL,
+        chat_id BIGINT NOT NULL REFERENCES users(chat_id) ON DELETE CASCADE,
+        status TEXT NOT NULL CHECK (status IN ('sent', 'blocked')),
+        delivered_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (campaign, chat_id)
+    )
+    """,
 )
 
 
@@ -421,6 +430,51 @@ class PostgresDatabase:
             )
             row = await cursor.fetchone()
         return row is not None
+
+    async def list_broadcast_recipients(
+        self,
+        campaign: str,
+        *,
+        limit: int | None = None,
+    ) -> list[int]:
+        sql = """
+            SELECT users.chat_id
+            FROM users
+            LEFT JOIN broadcast_deliveries
+                ON broadcast_deliveries.chat_id = users.chat_id
+               AND broadcast_deliveries.campaign = %s
+            WHERE broadcast_deliveries.chat_id IS NULL
+            ORDER BY users.created_at
+        """
+        values: tuple[object, ...] = (campaign,)
+        if limit is not None:
+            sql += " LIMIT %s"
+            values = (campaign, limit)
+        async with await self._connect() as connection:
+            cursor = await connection.execute(sql, values)
+            rows = await cursor.fetchall()
+        return [int(row["chat_id"]) for row in rows]
+
+    async def record_broadcast_delivery(
+        self,
+        campaign: str,
+        chat_id: int,
+        status: str,
+    ) -> None:
+        if status not in {"sent", "blocked"}:
+            raise ValueError(f"Unsupported broadcast status: {status}")
+        async with await self._connect() as connection:
+            await connection.execute(
+                """
+                INSERT INTO broadcast_deliveries (
+                    campaign, chat_id, status, delivered_at
+                ) VALUES (%s, %s, %s, %s)
+                ON CONFLICT(campaign, chat_id) DO UPDATE SET
+                    status = excluded.status,
+                    delivered_at = excluded.delivered_at
+                """,
+                (campaign, chat_id, status, datetime.now(UTC)),
+            )
 
     async def claim_telegram_update(self, update_id: int) -> bool:
         async with await self._connect() as connection:

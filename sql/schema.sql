@@ -63,5 +63,13 @@ CREATE TABLE IF NOT EXISTS feedback (
     reviewed_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS broadcast_deliveries (
+    campaign TEXT NOT NULL,
+    chat_id BIGINT NOT NULL REFERENCES users(chat_id) ON DELETE CASCADE,
+    status TEXT NOT NULL CHECK (status IN ('sent', 'blocked')),
+    delivered_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (campaign, chat_id)
+);
+
 CREATE INDEX IF NOT EXISTS users_due_idx ON users(status, next_send_at);
 CREATE INDEX IF NOT EXISTS feedback_created_idx ON feedback(created_at DESC);

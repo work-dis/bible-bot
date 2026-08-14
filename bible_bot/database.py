@@ -116,6 +116,14 @@ class SQLiteDatabase:
                 reviewed_at TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS broadcast_deliveries (
+                campaign TEXT NOT NULL,
+                chat_id INTEGER NOT NULL REFERENCES users(chat_id) ON DELETE CASCADE,
+                status TEXT NOT NULL CHECK (status IN ('sent', 'blocked')),
+                delivered_at TEXT NOT NULL,
+                PRIMARY KEY (campaign, chat_id)
+            );
+
             CREATE INDEX IF NOT EXISTS users_due_idx
                 ON users(status, next_send_at);
 
@@ -459,6 +467,47 @@ class SQLiteDatabase:
             )
             await self.connection.commit()
             return cursor.rowcount == 1
+
+    async def list_broadcast_recipients(
+        self,
+        campaign: str,
+        *,
+        limit: int | None = None,
+    ) -> list[int]:
+        sql = """
+            SELECT users.chat_id
+            FROM users
+            LEFT JOIN broadcast_deliveries
+                ON broadcast_deliveries.chat_id = users.chat_id
+               AND broadcast_deliveries.campaign = ?
+            WHERE broadcast_deliveries.chat_id IS NULL
+            ORDER BY users.created_at
+        """
+        values: tuple[object, ...] = (campaign,)
+        if limit is not None:
+            sql += " LIMIT ?"
+            values = (campaign, limit)
+        cursor = await self.connection.execute(sql, values)
+        return [int(row["chat_id"]) for row in await cursor.fetchall()]
+
+    async def record_broadcast_delivery(
+        self,
+        campaign: str,
+        chat_id: int,
+        status: str,
+    ) -> None:
+        if status not in {"sent", "blocked"}:
+            raise ValueError(f"Unsupported broadcast status: {status}")
+        async with self._lock:
+            await self.connection.execute(
+                """
+                INSERT OR REPLACE INTO broadcast_deliveries (
+                    campaign, chat_id, status, delivered_at
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (campaign, chat_id, status, datetime.now(UTC).isoformat()),
+            )
+            await self.connection.commit()
 
     async def claim_telegram_update(self, update_id: int) -> bool:
         async with self._lock:

@@ -91,6 +91,20 @@ async def test_feedback_is_saved_listed_and_marked_reviewed(database: Database) 
     assert (await database.list_feedback())[0].reviewed_at is not None
 
 
+async def test_broadcast_delivery_is_idempotent(database: Database) -> None:
+    await database.ensure_user(11, "Анна", "Europe/Minsk", "09:00")
+    await database.ensure_user(12, "Пётр", "Europe/Minsk", "09:00")
+
+    assert await database.list_broadcast_recipients("update") == [11, 12]
+    await database.record_broadcast_delivery("update", 11, "sent")
+    assert await database.list_broadcast_recipients("update") == [12]
+    await database.record_broadcast_delivery("update", 12, "blocked")
+    assert await database.list_broadcast_recipients("update") == []
+
+    with pytest.raises(ValueError, match="Unsupported broadcast status"):
+        await database.record_broadcast_delivery("update", 12, "failed")
+
+
 async def test_telegram_update_is_claimed_once(database: Database) -> None:
     assert await database.claim_telegram_update(12345) is True
     assert await database.claim_telegram_update(12345) is False
