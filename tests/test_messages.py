@@ -12,6 +12,7 @@ from bible_bot.messages import (
     public_reflection_text,
     selected_verses_text,
     split_telegram_text,
+    telegram_user_url,
     welcome_text,
 )
 
@@ -87,11 +88,18 @@ def test_verse_selection_rejects_numbers_outside_chapter() -> None:
 def test_public_reflection_and_long_text_are_telegram_safe() -> None:
     catalog = BibleCatalog.from_data_dir(DATA_DIR)
     chapter = catalog.get_chapter("JHN.3")
-    publication = public_reflection_text(chapter, (3, 16), "Анна", "Дела " * 1000)
+    publication = public_reflection_text(
+        chapter,
+        (3, 16),
+        "Анна & друзья",
+        "<Дела> " * 1000,
+        author_url=telegram_user_url(12345),
+    )
 
     parts = split_telegram_text(publication)
 
-    assert "Анна" in parts[0]
+    assert '<a href="tg://user?id=12345">Анна &amp; друзья</a>' in parts[0]
+    assert "&lt;Дела&gt;" in publication
     assert "Иоанна 3 · стихи 3, 16" in parts[0]
     assert "Выбранные стихи:" in parts[0]
     assert "Ибо так возлюбил Бог мир" in parts[0]
@@ -115,3 +123,32 @@ def test_public_channel_subscription_keyboard_uses_channel_username() -> None:
     ]
     assert len(channel_buttons) == 1
     assert channel_buttons[0].url == "https://t.me/bible_readers"
+
+
+def test_settings_keyboard_contains_feedback_button() -> None:
+    settings = settings_keyboard(
+        "active",
+        "@bible_readers",
+        "https://t.me/bible_feedback",
+    )
+
+    feedback_button = next(
+        button
+        for row in settings.inline_keyboard
+        for button in row
+        if button.text == "💬 Оставить отзыв"
+    )
+    assert feedback_button.url == "https://t.me/bible_feedback"
+
+
+def test_telegram_user_url_prefers_public_username() -> None:
+    assert telegram_user_url(12345, "reader") == "https://t.me/reader"
+    assert telegram_user_url(12345) == "tg://user?id=12345"
+
+
+def test_long_escaped_text_is_not_split_inside_html_entity() -> None:
+    parts = split_telegram_text("&lt;" * 2000, max_length=101)
+
+    assert all(len(part) <= 101 for part in parts)
+    assert all(not part.endswith(("&", "&l", "&lt")) for part in parts)
+    assert "".join(parts) == "&lt;" * 2000

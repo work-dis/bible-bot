@@ -93,7 +93,9 @@ def channel_subscription_keyboard(channel_id: int | str | None) -> InlineKeyboar
 
 
 def settings_keyboard(
-    status: str, channel_id: int | str | None = None
+    status: str,
+    channel_id: int | str | None = None,
+    feedback_url: str | None = None,
 ) -> InlineKeyboardMarkup:
     state_button = (
         InlineKeyboardButton(text="⏸ Приостановить", callback_data="settings:pause")
@@ -110,6 +112,8 @@ def settings_keyboard(
         rows.append(
             [InlineKeyboardButton(text="📣 Подписаться на канал", url=channel_url)]
         )
+    if feedback_url is not None:
+        rows.append([InlineKeyboardButton(text="💬 Оставить отзыв", url=feedback_url)])
     rows.extend(
         [
             [state_button],

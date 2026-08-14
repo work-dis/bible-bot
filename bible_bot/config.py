@@ -21,6 +21,7 @@ class Settings:
     cron_secret: str | None
     public_channel_id: int | str | None
     log_level: str
+    feedback_url: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -48,6 +49,7 @@ class Settings:
             telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip() or None,
             cron_secret=os.getenv("CRON_SECRET", "").strip() or None,
             public_channel_id=_parse_chat_id(os.getenv("PUBLIC_CHANNEL_ID", "")),
+            feedback_url=_parse_feedback_url(os.getenv("FEEDBACK_URL", "")),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )
 
@@ -65,3 +67,14 @@ def _parse_chat_id(value: str) -> int | str | None:
     if value.startswith("@") and len(value) > 1:
         return value
     raise ValueError("PUBLIC_CHANNEL_ID must be a numeric chat id or start with @")
+
+
+def _parse_feedback_url(value: str) -> str | None:
+    value = value.strip()
+    if not value:
+        return None
+    if value.startswith("@") and len(value) > 1:
+        return f"https://t.me/{value.removeprefix('@')}"
+    if value.startswith(("https://", "tg://")):
+        return value
+    raise ValueError("FEEDBACK_URL must start with https://, tg:// or @")

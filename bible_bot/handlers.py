@@ -38,6 +38,7 @@ from bible_bot.messages import (
     selected_verses_text,
     settings_text,
     split_telegram_text,
+    telegram_user_url,
     welcome_text,
 )
 from bible_bot.time_utils import (
@@ -144,7 +145,9 @@ def create_router(
     async def show_settings_message(message: Message, user: User) -> None:
         await message.answer(
             settings_text(user),
-            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+            reply_markup=settings_keyboard(
+                user.status, settings.public_channel_id, settings.feedback_url
+            ),
         )
 
     async def show_favorites_message(message: Message, chat_id: int) -> None:
@@ -226,7 +229,9 @@ def create_router(
             user = await database.get_user(user.chat_id)
             await query.message.edit_text(
                 settings_text(user),
-                reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+                reply_markup=settings_keyboard(
+                    user.status, settings.public_channel_id, settings.feedback_url
+                ),
             )
 
     @router.callback_query(F.data.startswith("time:custom:"))
@@ -270,7 +275,9 @@ def create_router(
             user = await database.get_user(user.chat_id)
             await query.message.edit_text(
                 settings_text(user),
-                reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+                reply_markup=settings_keyboard(
+                    user.status, settings.public_channel_id, settings.feedback_url
+                ),
             )
 
     @router.callback_query(F.data.startswith("tz:custom:"))
@@ -295,7 +302,9 @@ def create_router(
         user = await require_callback_user(query)
         await query.message.answer(
             settings_text(user),
-            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+            reply_markup=settings_keyboard(
+                user.status, settings.public_channel_id, settings.feedback_url
+            ),
         )
 
     @router.callback_query(F.data == "settings:pause")
@@ -306,7 +315,9 @@ def create_router(
         user = await database.get_user(user.chat_id)
         await query.message.edit_text(
             settings_text(user),
-            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+            reply_markup=settings_keyboard(
+                user.status, settings.public_channel_id, settings.feedback_url
+            ),
         )
 
     @router.message(Command("pause"))
@@ -325,7 +336,9 @@ def create_router(
         user = await database.get_user(user.chat_id)
         await query.message.edit_text(
             settings_text(user),
-            reply_markup=settings_keyboard(user.status, settings.public_channel_id),
+            reply_markup=settings_keyboard(
+                user.status, settings.public_channel_id, settings.feedback_url
+            ),
         )
 
     @router.callback_query(F.data == "settings:stop_confirm")
@@ -547,15 +560,25 @@ def create_router(
                 chapter = catalog.get_chapter(chapter_key)
                 raw_author = message.from_user.full_name if message.from_user else user.first_name
                 author = " ".join(raw_author.split()) or "Читатель"
+                author_url = telegram_user_url(
+                    message.from_user.id if message.from_user else user.chat_id,
+                    message.from_user.username if message.from_user else None,
+                )
                 body = message.text if message.text is not None else message.caption
-                publication = public_reflection_text(chapter, verse_numbers, author, body)
+                publication = public_reflection_text(
+                    chapter,
+                    verse_numbers,
+                    author,
+                    body,
+                    author_url=author_url,
+                )
                 try:
                     if message.text is not None:
                         for part in split_telegram_text(publication):
                             await bot.send_message(
                                 settings.public_channel_id,
                                 part,
-                                parse_mode=None,
+                                parse_mode="HTML",
                             )
                     elif (
                         message.video_note is not None
@@ -565,7 +588,7 @@ def create_router(
                             await bot.send_message(
                                 settings.public_channel_id,
                                 part,
-                                parse_mode=None,
+                                parse_mode="HTML",
                             )
                         await bot.copy_message(
                             chat_id=settings.public_channel_id,
@@ -578,7 +601,7 @@ def create_router(
                             from_chat_id=message.chat.id,
                             message_id=message.message_id,
                             caption=publication,
-                            parse_mode=None,
+                            parse_mode="HTML",
                         )
                 except TelegramAPIError:
                     logger.exception(

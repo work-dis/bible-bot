@@ -238,14 +238,21 @@ def public_reflection_text(
     verse_numbers: tuple[int, ...],
     author: str,
     body: str | None = None,
+    *,
+    author_url: str | None = None,
 ) -> str:
+    rendered_author = escape(author)
+    if author_url:
+        rendered_author = (
+            f'<a href="{escape(author_url, quote=True)}">{rendered_author}</a>'
+        )
     verse_line = ""
     if verse_numbers:
         verse_line = f" · стихи {format_verse_numbers(verse_numbers)}"
     result = (
         "💭 Размышления после чтения\n"
-        f"👤 {author}\n"
-        f"📖 {chapter.reference}{verse_line}"
+        f"👤 {rendered_author}\n"
+        f"📖 {escape(chapter.reference)}{verse_line}"
     )
     if verse_numbers:
         selected = set(verse_numbers)
@@ -253,13 +260,21 @@ def public_reflection_text(
         for source_line in chapter.lines:
             number, _, text = source_line.partition("\t")
             if int(number) in selected:
-                verse_lines.append(f"{number}  {text}")
+                verse_lines.append(f"{number}  {escape(text)}")
         rendered_verses = "\n".join(verse_lines)
         result += f"\n\nВыбранные стихи:\n{rendered_verses}"
     result += "\n\nНа какие дела сегодня вдохновляют прочитанные стихи?"
     if body:
-        result += f"\n\n{body.strip()}"
+        result += f"\n\n{escape(body.strip())}"
     return result
+
+
+def telegram_user_url(user_id: int, username: str | None = None) -> str:
+    """Return a public username URL or a Telegram ID mention for private accounts."""
+
+    if username:
+        return f"https://t.me/{username.removeprefix('@')}"
+    return f"tg://user?id={user_id}"
 
 
 def split_telegram_text(text: str, max_length: int = TELEGRAM_TEXT_LIMIT) -> tuple[str, ...]:
@@ -273,6 +288,13 @@ def split_telegram_text(text: str, max_length: int = TELEGRAM_TEXT_LIMIT) -> tup
             split_at = remaining.rfind(" ", 0, max_length + 1)
         if split_at < 1:
             split_at = max_length
+        # A long HTML-formatted publication may contain escaped user text.
+        # Never cut inside an entity or tag, otherwise Telegram rejects the part.
+        for opener, closer in (("&", ";"), ("<", ">")):
+            opener_at = remaining.rfind(opener, 0, split_at)
+            closer_at = remaining.rfind(closer, 0, split_at)
+            if opener_at > closer_at:
+                split_at = opener_at
         parts.append(remaining[:split_at].rstrip())
         remaining = remaining[split_at:].lstrip()
     if remaining:
@@ -354,5 +376,5 @@ HELP_TEXT = (
     "Одна глава приходит раз в день. Длинные главы делятся на несколько "
     "последовательных частей. Под главой можно выделить стихи и отправить "
     "размышления текстом, аудио или видео в открытый канал. Время рассылки "
-    "можно изменить в любой момент."
+    "можно изменить в любой момент. Оставить отзыв можно через кнопку в настройках."
 )
